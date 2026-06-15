@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FormVersionMapper">
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FormVersion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_version (template_id, version, schema_json, change_log, created_at)
+        VALUES (#{templateId}, #{version}, #{schemaJson}, #{changeLog}, #{createdAt})
+    </insert>
+
+    <select id="selectById" resultType="com.formdesigner.entity.FormVersion">
+        SELECT id, template_id, version, schema_json, change_log, created_at
+        FROM form_version WHERE id = #{id}
+    </select>
+
+    <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormVersion">
+        SELECT id, template_id, version, schema_json, change_log, created_at
+        FROM form_version WHERE template_id = #{templateId} ORDER BY version DESC
+    </select>
+
+    <select id="selectByTemplateIdAndVersion" resultType="com.formdesigner.entity.FormVersion">
+        SELECT id, template_id, version, schema_json, change_log, created_at
+        FROM form_version WHERE template_id = #{templateId} AND version = #{version}
+    </select>
+
+</mapper>

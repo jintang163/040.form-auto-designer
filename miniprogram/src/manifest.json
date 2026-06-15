@@ -1,0 +1,37 @@
+{
+  "name": "form-auto-designer-mp",
+  "appid": "__UNI__PLACEHOLDER",
+  "description": "表单自动设计器小程序",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "wx_placeholder_appid",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true
+    },
+    "usingComponents": true,
+    "permission": {
+      "scope.camera": {
+        "desc": "用于上传图片"
+      }
+    }
+  },
+  "h5": {
+    "devServer": {
+      "port": 5173,
+      "proxy": {
+        "/api": {
+          "target": "http://localhost:8080",
+          "changeOrigin": true
+        }
+      }
+    },
+    "title": "表单自动设计器",
+    "router": {
+      "mode": "hash"
+    }
+  }
+}

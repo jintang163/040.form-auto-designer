@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FormTemplateMapper">
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FormTemplate" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_template (template_name, template_code, schema_json, version, status, created_at, updated_at)
+        VALUES (#{templateName}, #{templateCode}, #{schemaJson}, #{version}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectById" resultType="com.formdesigner.entity.FormTemplate">
+        SELECT id, template_name, template_code, schema_json, version, status, created_at, updated_at
+        FROM form_template WHERE id = #{id}
+    </select>
+
+    <select id="selectByTemplateCode" resultType="com.formdesigner.entity.FormTemplate">
+        SELECT id, template_name, template_code, schema_json, version, status, created_at, updated_at
+        FROM form_template WHERE template_code = #{templateCode}
+    </select>
+
+    <select id="selectAll" resultType="com.formdesigner.entity.FormTemplate">
+        SELECT id, template_name, template_code, schema_json, version, status, created_at, updated_at
+        FROM form_template ORDER BY created_at DESC
+    </select>
+
+    <update id="updateById" parameterType="com.formdesigner.entity.FormTemplate">
+        UPDATE form_template
+        <set>
+            <if test="templateName != null">template_name = #{templateName},</if>
+            <if test="schemaJson != null">schema_json = #{schemaJson},</if>
+            <if test="version != null">version = #{version},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = #{updatedAt},
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM form_template WHERE id = #{id}
+    </delete>
+
+</mapper>

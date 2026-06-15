@@ -1,0 +1,17 @@
+package com.formdesigner.entity;
+
+import lombok.Data;
+import java.time.LocalDateTime;
+
+@Data
+public class FormTemplate {
+
+    private Long id;
+    private String templateName;
+    private String templateCode;
+    private String schemaJson;
+    private Integer version;
+    private Integer status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

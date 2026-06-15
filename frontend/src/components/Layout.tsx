@@ -1,0 +1,74 @@
+import { useState } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Layout as AntLayout, Menu, Breadcrumb } from 'antd';
+import {
+  FileTextOutlined,
+  DatabaseOutlined,
+  HomeOutlined,
+} from '@ant-design/icons';
+
+const { Sider, Header, Content } = AntLayout;
+
+const menuItems = [
+  {
+    key: '/templates',
+    icon: <FileTextOutlined />,
+    label: '模板管理',
+  },
+  {
+    key: '/form-data',
+    icon: <DatabaseOutlined />,
+    label: '数据填报',
+  },
+];
+
+function buildBreadcrumb(pathname: string) {
+  const parts = pathname.split('/').filter(Boolean);
+  const nameMap: Record<string, string> = {
+    templates: '模板管理',
+    create: '新建模板',
+    edit: '编辑模板',
+    preview: '预览模板',
+    'form-data': '数据填报',
+  };
+  const items = [{ title: <><HomeOutlined /><span>首页</span></> }];
+  let path = '';
+  for (const part of parts) {
+    path += `/${part}`;
+    items.push({ title: nameMap[part] || part });
+  }
+  return items;
+}
+
+export default function Layout() {
+  const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const selectedKey = '/' + location.pathname.split('/').filter(Boolean)[0];
+
+  return (
+    <AntLayout style={{ minHeight: '100vh' }}>
+      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
+        <div className="logo">
+          {collapsed ? 'FD' : '表单设计器'}
+        </div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          items={menuItems}
+          onClick={({ key }) => navigate(key)}
+        />
+      </Sider>
+      <AntLayout>
+        <Header style={{ padding: '0 24px', background: '#fff' }}>
+          <Breadcrumb items={buildBreadcrumb(location.pathname)} />
+        </Header>
+        <Content style={{ margin: 16, padding: 24, background: '#fff', borderRadius: 8 }}>
+          <Outlet />
+        </Content>
+      </AntLayout>
+    </AntLayout>
+  );
+}

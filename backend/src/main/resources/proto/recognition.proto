@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package recognition;
+
+option java_package = "com.formdesigner.grpc.generated";
+option java_outer_classname = "RecognitionProto";
+
+service RecognitionService {
+  rpc RecognizeForm (RecognizeRequest) returns (RecognizeResponse) {}
+}
+
+message RecognizeRequest {
+  bytes image_data = 1;
+  string content_type = 2;
+}
+
+message RecognizeResponse {
+  bool success = 1;
+  string message = 2;
+  repeated FieldItem fields = 3;
+}
+
+message FieldItem {
+  string field_name = 1;
+  string field_label = 2;
+  string field_type = 3;
+  string input_type = 4;
+  bool required = 5;
+  string default_value = 6;
+  int32 sort_order = 7;
+}

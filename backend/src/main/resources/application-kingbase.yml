@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    driver-class-name: com.kingbase8.Driver
+    url: jdbc:kingbase8://localhost:54321/form_designer
+    username: system
+    password: system

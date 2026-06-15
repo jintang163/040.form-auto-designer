@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package recognition;
+
+service RecognitionService {
+  rpc RecognizeImage(ImageRequest) returns (RecognitionResponse);
+  rpc RecognizeWord(WordRequest) returns (RecognitionResponse);
+}
+
+message ImageRequest {
+  bytes image_data = 1;
+  string format = 2;
+}
+
+message WordRequest {
+  bytes file_data = 1;
+  string filename = 2;
+}
+
+message TableCellProto {
+  string text = 1;
+  int32 row = 2;
+  int32 col = 3;
+  int32 row_span = 4;
+  int32 col_span = 5;
+  repeated int32 bbox = 6;
+}
+
+message TableStructureProto {
+  int32 rows = 1;
+  int32 cols = 2;
+  repeated TableCellProto cells = 3;
+}
+
+message FieldDefinitionProto {
+  string name = 1;
+  string label = 2;
+  string input_type = 3;
+  bool required = 4;
+  int32 row = 5;
+  int32 col = 6;
+  int32 row_span = 7;
+  int32 col_span = 8;
+  repeated string options = 9;
+}
+
+message RecognitionResponse {
+  bool success = 1;
+  string error = 2;
+  string schema_json = 3;
+  repeated TableStructureProto tables = 4;
+  repeated FieldDefinitionProto fields = 5;
+}

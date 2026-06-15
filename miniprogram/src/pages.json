@@ -1,0 +1,41 @@
+{
+  "pages": [
+    { "path": "pages/index/index", "style": { "navigationBarTitleText": "表单中心" } },
+    { "path": "pages/fill/index", "style": { "navigationBarTitleText": "表单填报" } },
+    { "path": "pages/history/index", "style": { "navigationBarTitleText": "填报历史" } },
+    { "path": "pages/result/index", "style": { "navigationBarTitleText": "提交结果" } },
+    { "path": "pages/draft/index", "style": { "navigationBarTitleText": "草稿箱" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "表单设计器",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F5F5F5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#2979FF",
+    "borderStyle": "black",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/history/index",
+        "text": "历史",
+        "iconPath": "static/tabbar/history.png",
+        "selectedIconPath": "static/tabbar/history-active.png"
+      },
+      {
+        "pagePath": "pages/draft/index",
+        "text": "草稿",
+        "iconPath": "static/tabbar/draft.png",
+        "selectedIconPath": "static/tabbar/draft-active.png"
+      }
+    ]
+  }
+}

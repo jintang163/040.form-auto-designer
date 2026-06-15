@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FormFieldMapper">
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FormField" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_field (template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config)
+        VALUES (#{templateId}, #{fieldName}, #{fieldLabel}, #{fieldType}, #{inputType}, #{required}, #{defaultValue}, #{validationRules}, #{sortOrder}, #{layoutConfig})
+    </insert>
+
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO form_field (template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.templateId}, #{item.fieldName}, #{item.fieldLabel}, #{item.fieldType}, #{item.inputType}, #{item.required}, #{item.defaultValue}, #{item.validationRules}, #{item.sortOrder}, #{item.layoutConfig})
+        </foreach>
+    </insert>
+
+    <select id="selectById" resultType="com.formdesigner.entity.FormField">
+        SELECT id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config
+        FROM form_field WHERE id = #{id}
+    </select>
+
+    <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormField">
+        SELECT id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config
+        FROM form_field WHERE template_id = #{templateId} ORDER BY sort_order
+    </select>
+
+    <update id="updateById" parameterType="com.formdesigner.entity.FormField">
+        UPDATE form_field
+        <set>
+            <if test="fieldName != null">field_name = #{fieldName},</if>
+            <if test="fieldLabel != null">field_label = #{fieldLabel},</if>
+            <if test="fieldType != null">field_type = #{fieldType},</if>
+            <if test="inputType != null">input_type = #{inputType},</if>
+            <if test="required != null">required = #{required},</if>
+            <if test="defaultValue != null">default_value = #{defaultValue},</if>
+            <if test="validationRules != null">validation_rules = #{validationRules},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="layoutConfig != null">layout_config = #{layoutConfig},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM form_field WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByTemplateId">
+        DELETE FROM form_field WHERE template_id = #{templateId}
+    </delete>
+
+</mapper>
