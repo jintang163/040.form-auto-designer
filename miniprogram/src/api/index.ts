@@ -92,3 +92,31 @@ export function deleteDraft(id: string) {
     method: 'DELETE'
   })
 }
+
+export function speechToText(filePath: string) {
+  return new Promise<{ text: string; confidence: number }>((resolve, reject) => {
+    uni.uploadFile({
+      url: BASE_URL + '/api/voice/speechToText',
+      filePath,
+      name: 'file',
+      header: {
+        Authorization: getToken() ? `Bearer ${getToken()}` : ''
+      },
+      success: (res) => {
+        try {
+          const data = JSON.parse(res.data) as ApiResponse<{ text: string; confidence: number }>
+          if (data.code === 200 || data.code === 0) {
+            resolve(data.data)
+          } else {
+            reject(new Error(data.message || '语音识别失败'))
+          }
+        } catch (e) {
+          reject(new Error('解析响应失败'))
+        }
+      },
+      fail: (err) => {
+        reject(err)
+      }
+    })
+  })
+}

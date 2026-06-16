@@ -12,12 +12,28 @@
         @update:current-page="onPageChange"
       >
         <DynamicForm
+          ref="dynamicFormRef"
           :fields="currentPageFields"
           v-model="formData"
           :errors="fieldErrors"
+          :enable-voice="true"
+          :voice-mock-mode="true"
           @field-change="onFieldChange"
+          @voice-fill="onVoiceFill"
+          @voice-error="onVoiceError"
         />
       </FormPaginator>
+
+      <view class="voice-fab">
+        <VoiceInput
+          :fields="allFields"
+          :enable-multiple="true"
+          :mock-mode="true"
+          @fill="onGlobalVoiceFill"
+          @error="onVoiceError"
+        />
+        <text class="voice-fab-tip">语音填充</text>
+      </view>
 
       <view class="bottom-bar">
         <u-button
@@ -69,11 +85,15 @@ import { saveDraft } from '@/utils/draftManager'
 import { submitFormData } from '@/api'
 import DynamicForm from '@/components/DynamicForm.vue'
 import FormPaginator from '@/components/FormPaginator.vue'
+import VoiceInput from '@/components/VoiceInput.vue'
+import type { ParsedVoiceResult } from '@/utils/voiceParser'
 
 const store = useFormStore()
 const loading = ref(false)
 const currentPage = ref(0)
 const fieldErrors = ref<Record<string, string>>({})
+const dynamicFormRef = ref<InstanceType<typeof DynamicForm> | null>(null)
+const showVoiceTip = ref(true)
 
 let templateId = ''
 let templateName = ''
@@ -124,6 +144,11 @@ const currentPageFields = computed(() => {
   return mobileSchema.value.pages[currentPage.value]?.fields || []
 })
 
+const allFields = computed(() => {
+  if (!mobileSchema.value) return []
+  return mobileSchema.value.pages.flatMap((page) => page.fields)
+})
+
 function onPageChange(page: number) {
   currentPage.value = page
 }
@@ -135,6 +160,45 @@ function onFieldChange(key: string, value: any) {
     delete newErrors[key]
     fieldErrors.value = newErrors
   }
+}
+
+function onVoiceFill(results: ParsedVoiceResult[]) {
+  if (results.length > 0) {
+    const fieldNames = results.map((r) => r.matchedField.title).join('、')
+    uni.showToast({
+      title: `已填充: ${fieldNames}`,
+      icon: 'none',
+      duration: 2000
+    })
+    saveDraft(templateId, templateName, store.formData)
+  }
+}
+
+function onGlobalVoiceFill(results: ParsedVoiceResult[]) {
+  if (results.length > 0 && dynamicFormRef.value) {
+    dynamicFormRef.value.onVoiceFillMultiple(results)
+
+    const firstResult = results[0]
+    const targetPageIdx = mobileSchema.value?.pages.findIndex((page) =>
+      page.fields.some((f) => f.key === firstResult.fieldKey)
+    )
+    if (targetPageIdx !== undefined && targetPageIdx >= 0 && targetPageIdx !== currentPage.value) {
+      currentPage.value = targetPageIdx
+      dynamicFormRef.value?.highlightField(firstResult.fieldKey)
+    }
+
+    const fieldNames = results.map((r) => r.matchedField.title).join('、')
+    uni.showToast({
+      title: `已填充 ${results.length} 个字段: ${fieldNames}`,
+      icon: 'none',
+      duration: 2500
+    })
+    saveDraft(templateId, templateName, store.formData)
+  }
+}
+
+function onVoiceError(message: string) {
+  uni.showToast({ title: message, icon: 'none' })
 }
 
 async function onSubmit() {
@@ -233,5 +297,25 @@ function goBack() {
   background: #fff;
   box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
   z-index: 100;
+}
+
+.voice-fab {
+  position: fixed;
+  right: 32rpx;
+  bottom: 180rpx;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+
+  .voice-fab-tip {
+    font-size: 20rpx;
+    color: #999;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4rpx 12rpx;
+    border-radius: 16rpx;
+    white-space: nowrap;
+  }
 }
 </style>

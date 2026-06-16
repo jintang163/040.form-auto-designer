@@ -16,8 +16,14 @@
     "permission": {
       "scope.camera": {
         "desc": "用于上传图片"
+      },
+      "scope.record": {
+        "desc": "用于语音输入功能，录制语音识别为文字填充表单"
       }
-    }
+    },
+    "requiredPrivateInfos": [
+      "getRecorderManager"
+    ]
   },
   "h5": {
     "devServer": {

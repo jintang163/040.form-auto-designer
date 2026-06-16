@@ -1,7 +1,10 @@
 <template>
   <view class="dynamic-form">
     <template v-for="field in visibleFields" :key="field.key">
-      <view class="form-field">
+      <view
+        class="form-field"
+        :class="{ 'field-highlight': highlightFieldKey === field.key }"
+      >
         <view class="field-label">
           <text v-if="field.required" class="required">*</text>
           <text>{{ field.title }}</text>
@@ -9,31 +12,44 @@
         <view v-if="field.description" class="field-desc">{{ field.description }}</view>
 
         <view class="field-content">
-          <u-input
-            v-if="field.componentType === 'u-input' && field.type === 'number'"
-            v-model="formValues[field.key]"
-            type="number"
-            :placeholder="field.placeholder"
-            :disabled="field.disabled"
-            border="surround"
-            @change="onFieldChange(field.key, $event)"
-          />
-          <u-input
-            v-else-if="field.componentType === 'u-input'"
-            v-model="formValues[field.key]"
-            :placeholder="field.placeholder"
-            :disabled="field.disabled"
-            border="surround"
-            @change="onFieldChange(field.key, $event)"
-          />
+          <view v-if="field.componentType === 'u-input' || field.componentType === 'u-textarea'" class="input-wrap">
+            <u-input
+              v-if="field.componentType === 'u-input' && field.type === 'number'"
+              v-model="formValues[field.key]"
+              type="number"
+              :placeholder="field.placeholder"
+              :disabled="field.disabled"
+              border="surround"
+              @change="onFieldChange(field.key, $event)"
+            />
+            <u-input
+              v-else-if="field.componentType === 'u-input'"
+              v-model="formValues[field.key]"
+              :placeholder="field.placeholder"
+              :disabled="field.disabled"
+              border="surround"
+              @change="onFieldChange(field.key, $event)"
+            />
 
-          <u-textarea
-            v-else-if="field.componentType === 'u-textarea'"
-            v-model="formValues[field.key]"
-            :placeholder="field.placeholder"
-            :disabled="field.disabled"
-            @change="onFieldChange(field.key, $event)"
-          />
+            <u-textarea
+              v-else-if="field.componentType === 'u-textarea'"
+              v-model="formValues[field.key]"
+              :placeholder="field.placeholder"
+              :disabled="field.disabled"
+              auto-height
+              @change="onFieldChange(field.key, $event)"
+            />
+
+            <VoiceInput
+              v-if="!field.disabled && enableVoice"
+              class="field-voice-btn"
+              :fields="[field]"
+              :mock-mode="voiceMockMode"
+              :mock-text="`${field.title}示例内容`"
+              @fill="(results) => onVoiceFillSingle(field, results)"
+              @error="onVoiceError"
+            />
+          </view>
 
           <u-datetime-picker
             v-else-if="field.componentType === 'u-datetime-picker'"
@@ -95,24 +111,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import type { MobileField } from '@/types'
 import FileUploader from './FileUploader.vue'
+import VoiceInput from './VoiceInput.vue'
+import type { ParsedVoiceResult } from '@/utils/voiceParser'
 
 const props = defineProps<{
   fields: MobileField[]
   modelValue: Record<string, any>
   errors?: Record<string, string>
+  enableVoice?: boolean
+  voiceMockMode?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Record<string, any>): void
   (e: 'fieldChange', key: string, value: any): void
+  (e: 'voiceFill', results: ParsedVoiceResult[]): void
+  (e: 'voiceError', message: string): void
 }>()
 
 const formValues = ref<Record<string, any>>({ ...props.modelValue })
 const checkboxValues = ref<Record<string, any[]>>({})
 const showPicker = ref(false)
+const highlightFieldKey = ref<string | null>(null)
 
 watch(
   () => props.modelValue,
@@ -174,6 +197,43 @@ function getPickerLabel(field: MobileField): string {
   const opt = field.options.find((o) => o.value === val)
   return opt ? opt.label : ''
 }
+
+function onVoiceFillSingle(field: MobileField, results: ParsedVoiceResult[]) {
+  if (results.length > 0) {
+    const result = results[0]
+    onFieldChange(field.key, result.value)
+    highlightField(field.key)
+    emit('voiceFill', results)
+  }
+}
+
+function onVoiceFillMultiple(results: ParsedVoiceResult[]) {
+  for (const result of results) {
+    onFieldChange(result.fieldKey, result.value)
+  }
+  if (results.length > 0) {
+    highlightField(results[0].fieldKey)
+  }
+  emit('voiceFill', results)
+}
+
+function onVoiceError(message: string) {
+  emit('voiceError', message)
+}
+
+function highlightField(fieldKey: string) {
+  highlightFieldKey.value = fieldKey
+  nextTick(() => {
+    setTimeout(() => {
+      highlightFieldKey.value = null
+    }, 2000)
+  })
+}
+
+defineExpose({
+  onVoiceFillMultiple,
+  highlightField
+})
 </script>
 
 <style lang="scss" scoped>
@@ -205,6 +265,34 @@ function getPickerLabel(field: MobileField): string {
 
 .field-content {
   width: 100%;
+}
+
+.input-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 12rpx;
+}
+
+.field-voice-btn {
+  flex-shrink: 0;
+  margin-bottom: 4rpx;
+}
+
+.form-field.field-highlight {
+  animation: highlightPulse 0.6s ease-in-out 3;
+  background: linear-gradient(90deg, #e6f4ff, transparent);
+  border-radius: 12rpx;
+
+  @keyframes highlightPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.01);
+    }
+  }
 }
 
 .date-display,
