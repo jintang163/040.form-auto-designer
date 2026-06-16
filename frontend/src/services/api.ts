@@ -9,6 +9,7 @@ import type {
   RecognitionResult,
   FieldConfig,
   VersionCompareResult,
+  RollbackResult,
 } from '@/types';
 
 const request = axios.create({
@@ -109,13 +110,22 @@ export const templateApi = {
 
 export const fieldApi = {
   getFields: (templateId: string) =>
-    request.get<any, ApiResponse<FormField[]>>(`/templates/${templateId}/fields`).then(unwrap),
+    request
+      .get<any, ApiResponse<any[]>>(`/templates/${templateId}/fields`)
+      .then(unwrap)
+      .then((list) => list.map(mapFieldFromBackend)),
 
   updateField: (templateId: string, fieldId: string, data: Partial<FieldConfig>) =>
-    request.put<any, ApiResponse<FormField>>(`/templates/${templateId}/fields/${fieldId}`, data).then(unwrap),
+    request
+      .put<any, ApiResponse<any>>(`/templates/${templateId}/fields/${fieldId}`, data)
+      .then(unwrap)
+      .then(mapFieldFromBackend),
 
   batchUpdateFields: (templateId: string, fields: Partial<FieldConfig>[]) =>
-    request.put<any, ApiResponse<FormField[]>>(`/templates/${templateId}/fields/batch`, { fields }).then(unwrap),
+    request
+      .put<any, ApiResponse<any[]>>(`/templates/${templateId}/fields/batch`, { fields })
+      .then(unwrap)
+      .then((list) => list.map(mapFieldFromBackend)),
 
   deleteField: (templateId: string, fieldId: string) =>
     request.delete<any, ApiResponse<void>>(`/templates/${templateId}/fields/${fieldId}`).then(unwrap),
@@ -159,8 +169,27 @@ function mapVersionFromBackend(v: any): FormVersion {
     templateId: String(v.templateId),
     version: v.version,
     schemaJson: v.schemaJson,
+    fieldsJson: v.fieldsJson,
     changeLog: v.changeLog,
     createdAt: v.createdAt,
+  };
+}
+
+function mapFieldFromBackend(f: any): FormField {
+  return {
+    id: String(f.id),
+    templateId: String(f.templateId),
+    fieldName: f.fieldName,
+    fieldLabel: f.fieldLabel,
+    fieldType: f.fieldType || 'string',
+    inputType: f.inputType || 'text',
+    required: f.required || false,
+    defaultValue: f.defaultValue,
+    validationRules: f.validationRules ? (typeof f.validationRules === 'string' ? JSON.parse(f.validationRules) : f.validationRules) : [],
+    sortOrder: f.sortOrder ?? 0,
+    layoutConfig: f.layoutConfig ? (typeof f.layoutConfig === 'string' ? JSON.parse(f.layoutConfig) : f.layoutConfig) : { row: 1, col: 1, rowSpan: 1, colSpan: 1 },
+    createdAt: f.createdAt || new Date().toISOString(),
+    updatedAt: f.updatedAt || new Date().toISOString(),
   };
 }
 
@@ -204,5 +233,9 @@ export const versionApi = {
         changeLog,
       })
       .then(unwrap)
-      .then(mapTemplateFromBackend),
+      .then((r): RollbackResult => ({
+        template: mapTemplateFromBackend(r.template),
+        fields: (r.fields || []).map(mapFieldFromBackend),
+        newVersion: r.newVersion,
+      })),
 };

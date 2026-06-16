@@ -8,12 +8,12 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { versionApi } from '@/services/api';
-import type { FormVersion } from '@/types';
+import type { FormVersion, RollbackResult } from '@/types';
 
 interface VersionTimelineProps {
   templateId: string;
   currentVersion: number;
-  onRefresh?: () => void;
+  onRefresh?: (rollbackResult?: RollbackResult) => void;
   onCompare?: (sourceVersion: number, targetVersion: number) => void;
 }
 
@@ -63,13 +63,13 @@ export default function VersionTimeline({ templateId, currentVersion, onRefresh,
     if (!rollbackTarget) return;
     try {
       const values = await rollbackForm.validateFields();
-      await versionApi.rollbackVersion(templateId, rollbackTarget, values.changeLog);
+      const result = await versionApi.rollbackVersion(templateId, rollbackTarget, values.changeLog);
       message.success('版本回滚成功');
       setRollbackModalOpen(false);
       setRollbackTarget(null);
       rollbackForm.resetFields();
       loadVersions();
-      onRefresh?.();
+      onRefresh?.(result);
     } catch (e: any) {
       if (e.errorFields) return;
       message.error(e.message);

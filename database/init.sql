@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS form_version (
     template_id     BIGINT          NOT NULL,
     version         INT             NOT NULL,
     schema_json     TEXT,
+    fields_json     TEXT,
     change_log      VARCHAR(500),
     created_by      VARCHAR(100),
     created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
@@ -113,6 +114,7 @@ COMMENT ON COLUMN form_version.id IS '主键ID';
 COMMENT ON COLUMN form_version.template_id IS '所属模板ID';
 COMMENT ON COLUMN form_version.version IS '版本号';
 COMMENT ON COLUMN form_version.schema_json IS '版本JSON Schema快照';
+COMMENT ON COLUMN form_version.fields_json IS '版本字段明细快照(JSON数组)';
 COMMENT ON COLUMN form_version.change_log IS '变更日志';
 COMMENT ON COLUMN form_version.created_by IS '版本创建人';
 COMMENT ON COLUMN form_version.created_at IS '创建时间';

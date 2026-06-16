@@ -1,9 +1,12 @@
 package com.formdesigner.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.formdesigner.dto.TemplateCreateDTO;
 import com.formdesigner.dto.TemplateUpdateDTO;
+import com.formdesigner.entity.FormField;
 import com.formdesigner.entity.FormTemplate;
 import com.formdesigner.entity.FormVersion;
+import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.mapper.FormVersionMapper;
 import com.formdesigner.service.FormTemplateService;
@@ -20,6 +23,17 @@ public class FormTemplateServiceImpl implements FormTemplateService {
 
     private final FormTemplateMapper formTemplateMapper;
     private final FormVersionMapper formVersionMapper;
+    private final FormFieldMapper formFieldMapper;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private String serializeFields(Long templateId) {
+        try {
+            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+            return objectMapper.writeValueAsString(fields);
+        } catch (Exception e) {
+            throw new RuntimeException("序列化字段数据失败: " + e.getMessage(), e);
+        }
+    }
 
     @Override
     @Transactional
@@ -35,10 +49,13 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         template.setUpdatedAt(LocalDateTime.now());
         formTemplateMapper.insert(template);
 
+        String fieldsJson = serializeFields(template.getId());
+
         FormVersion version = new FormVersion();
         version.setTemplateId(template.getId());
         version.setVersion(1);
         version.setSchemaJson(dto.getSchemaJson());
+        version.setFieldsJson(fieldsJson);
         version.setChangeLog(dto.getChangeLog() != null ? dto.getChangeLog() : "初始创建");
         version.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(version);
@@ -73,10 +90,13 @@ public class FormTemplateServiceImpl implements FormTemplateService {
             int newVersion = template.getVersion() + 1;
             template.setVersion(newVersion);
 
+            String fieldsJson = serializeFields(id);
+
             FormVersion version = new FormVersion();
             version.setTemplateId(id);
             version.setVersion(newVersion);
             version.setSchemaJson(dto.getSchemaJson());
+            version.setFieldsJson(fieldsJson);
             version.setChangeLog(dto.getChangeLog() != null ? dto.getChangeLog() : "版本更新");
             version.setCreatedAt(LocalDateTime.now());
             formVersionMapper.insert(version);
@@ -114,10 +134,14 @@ public class FormTemplateServiceImpl implements FormTemplateService {
 
         int newVersion = template.getVersion() + 1;
         template.setVersion(newVersion);
+
+        String fieldsJson = serializeFields(id);
+
         FormVersion version = new FormVersion();
         version.setTemplateId(id);
         version.setVersion(newVersion);
         version.setSchemaJson(template.getSchemaJson());
+        version.setFieldsJson(fieldsJson);
         version.setChangeLog("发布版本");
         version.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(version);
@@ -133,6 +157,9 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         if (source == null) {
             throw new IllegalArgumentException("模板不存在");
         }
+
+        List<FormField> sourceFields = formFieldMapper.selectByTemplateId(id);
+
         FormTemplate copy = new FormTemplate();
         copy.setTemplateName(source.getTemplateName() + "_副本");
         copy.setTemplateCode(source.getTemplateCode() + "_copy_" + System.currentTimeMillis());
@@ -144,10 +171,28 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         copy.setUpdatedAt(LocalDateTime.now());
         formTemplateMapper.insert(copy);
 
+        for (FormField field : sourceFields) {
+            FormField newField = new FormField();
+            newField.setTemplateId(copy.getId());
+            newField.setFieldName(field.getFieldName());
+            newField.setFieldLabel(field.getFieldLabel());
+            newField.setFieldType(field.getFieldType());
+            newField.setInputType(field.getInputType());
+            newField.setRequired(field.getRequired());
+            newField.setDefaultValue(field.getDefaultValue());
+            newField.setValidationRules(field.getValidationRules());
+            newField.setSortOrder(field.getSortOrder());
+            newField.setLayoutConfig(field.getLayoutConfig());
+            formFieldMapper.insert(newField);
+        }
+
+        String fieldsJson = serializeFields(copy.getId());
+
         FormVersion version = new FormVersion();
         version.setTemplateId(copy.getId());
         version.setVersion(1);
         version.setSchemaJson(copy.getSchemaJson());
+        version.setFieldsJson(fieldsJson);
         version.setChangeLog("复制自模板 " + source.getTemplateName() + "(v" + source.getVersion() + ")");
         version.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(version);

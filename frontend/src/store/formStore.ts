@@ -16,6 +16,7 @@ interface FormStore {
   fetchTemplates: (page?: number, pageSize?: number, keyword?: string) => Promise<void>;
   setCurrentTemplate: (template: FormTemplate | null) => void;
   fetchFields: (templateId: string) => Promise<void>;
+  setFields: (fields: FormField[]) => void;
   updateField: (templateId: string, fieldId: string, data: Partial<FieldConfig>) => Promise<void>;
   batchUpdateFields: (templateId: string, fields: Partial<FieldConfig>[]) => Promise<void>;
   deleteField: (templateId: string, fieldId: string) => Promise<void>;
@@ -93,6 +94,7 @@ export const useFormStore = create<FormStore>((set, get) => ({
   setRecognition: (result) => set({ recognition: result }),
   setRecognitionLoading: (loading) => set({ recognitionLoading: loading }),
   setSelectedFieldId: (id) => set({ selectedFieldId: id }),
+  setFields: (fields) => set({ fields }),
 
   addFieldLocal: (field) => set((s) => ({ fields: [...s.fields, field] })),
 

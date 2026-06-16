@@ -1,13 +1,17 @@
 package com.formdesigner.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.formdesigner.dto.VersionRollbackDTO;
+import com.formdesigner.entity.FormField;
 import com.formdesigner.entity.FormTemplate;
 import com.formdesigner.entity.FormVersion;
+import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.mapper.FormVersionMapper;
 import com.formdesigner.service.FormVersionService;
 import com.formdesigner.util.SchemaDiffUtil;
 import com.formdesigner.vo.FieldDiffVO;
+import com.formdesigner.vo.RollbackResultVO;
 import com.formdesigner.vo.VersionCompareResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,17 @@ public class FormVersionServiceImpl implements FormVersionService {
 
     private final FormVersionMapper formVersionMapper;
     private final FormTemplateMapper formTemplateMapper;
+    private final FormFieldMapper formFieldMapper;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private String serializeFields(Long templateId) {
+        try {
+            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+            return objectMapper.writeValueAsString(fields);
+        } catch (Exception e) {
+            throw new RuntimeException("序列化字段数据失败: " + e.getMessage(), e);
+        }
+    }
 
     @Override
     public FormVersion getById(Long id) {
@@ -53,6 +68,7 @@ public class FormVersionServiceImpl implements FormVersionService {
         version.setTemplateId(templateId);
         version.setVersion(newVersion);
         version.setSchemaJson(template.getSchemaJson());
+        version.setFieldsJson(serializeFields(templateId));
         version.setChangeLog(changeLog != null ? changeLog : "手动创建快照");
         version.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(version);
@@ -96,7 +112,7 @@ public class FormVersionServiceImpl implements FormVersionService {
 
     @Override
     @Transactional
-    public FormTemplate rollbackVersion(Long templateId, VersionRollbackDTO dto) {
+    public RollbackResultVO rollbackVersion(Long templateId, VersionRollbackDTO dto) {
         FormTemplate template = formTemplateMapper.selectById(templateId);
         if (template == null) {
             throw new IllegalArgumentException("模板不存在");
@@ -115,9 +131,17 @@ public class FormVersionServiceImpl implements FormVersionService {
         rollbackSnapshot.setTemplateId(templateId);
         rollbackSnapshot.setVersion(snapshotVersion);
         rollbackSnapshot.setSchemaJson(template.getSchemaJson());
+        rollbackSnapshot.setFieldsJson(serializeFields(templateId));
         rollbackSnapshot.setChangeLog("回滚前快照，目标版本 v" + dto.getTargetVersion());
         rollbackSnapshot.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(rollbackSnapshot);
+
+        formFieldMapper.deleteByTemplateId(templateId);
+
+        List<FormField> restoredFields = restoreFieldsFromJson(targetVersion.getFieldsJson(), templateId);
+        if (!restoredFields.isEmpty()) {
+            formFieldMapper.batchInsert(restoredFields);
+        }
 
         template.setSchemaJson(targetVersion.getSchemaJson());
         template.setVersion(rollbackVersionNum);
@@ -128,10 +152,32 @@ public class FormVersionServiceImpl implements FormVersionService {
         rollbackVersionRecord.setTemplateId(templateId);
         rollbackVersionRecord.setVersion(rollbackVersionNum);
         rollbackVersionRecord.setSchemaJson(targetVersion.getSchemaJson());
+        rollbackVersionRecord.setFieldsJson(targetVersion.getFieldsJson());
         rollbackVersionRecord.setChangeLog(dto.getChangeLog() != null ? dto.getChangeLog() : "回滚至版本 v" + dto.getTargetVersion());
         rollbackVersionRecord.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(rollbackVersionRecord);
 
-        return template;
+        RollbackResultVO result = new RollbackResultVO();
+        result.setTemplate(template);
+        result.setFields(restoredFields);
+        result.setNewVersion(rollbackVersionNum);
+        return result;
+    }
+
+    private List<FormField> restoreFieldsFromJson(String fieldsJson, Long templateId) {
+        if (fieldsJson == null || fieldsJson.isBlank()) {
+            return new ArrayList<>();
+        }
+        try {
+            List<FormField> fields = objectMapper.readValue(fieldsJson,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, FormField.class));
+            for (FormField field : fields) {
+                field.setId(null);
+                field.setTemplateId(templateId);
+            }
+            return fields;
+        } catch (Exception e) {
+            throw new RuntimeException("反序列化字段数据失败: " + e.getMessage(), e);
+        }
     }
 }

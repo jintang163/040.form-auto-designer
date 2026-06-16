@@ -10,6 +10,7 @@ public class FormVersion {
     private Long templateId;
     private Integer version;
     private String schemaJson;
+    private String fieldsJson;
     private String changeLog;
     private LocalDateTime createdAt;
 }

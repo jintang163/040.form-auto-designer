@@ -2,9 +2,9 @@ package com.formdesigner.controller;
 
 import com.formdesigner.common.R;
 import com.formdesigner.dto.VersionRollbackDTO;
-import com.formdesigner.entity.FormTemplate;
 import com.formdesigner.entity.FormVersion;
 import com.formdesigner.service.FormVersionService;
+import com.formdesigner.vo.RollbackResultVO;
 import com.formdesigner.vo.VersionCompareResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -45,8 +45,8 @@ public class FormVersionController {
     }
 
     @PostMapping("/rollback")
-    public R<FormTemplate> rollbackVersion(@PathVariable Long templateId,
-                                           @Valid @RequestBody VersionRollbackDTO dto) {
+    public R<RollbackResultVO> rollbackVersion(@PathVariable Long templateId,
+                                               @Valid @RequestBody VersionRollbackDTO dto) {
         return R.ok(formVersionService.rollbackVersion(templateId, dto));
     }
 }

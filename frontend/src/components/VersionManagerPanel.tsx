@@ -3,6 +3,7 @@ import { Modal, Drawer, Button, message } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import VersionTimeline from './VersionTimeline';
 import VersionDiffModal from './VersionDiffModal';
+import type { RollbackResult } from '@/types';
 
 interface VersionManagerPanelProps {
   templateId: string;
@@ -10,7 +11,7 @@ interface VersionManagerPanelProps {
   currentVersion: number;
   open: boolean;
   onClose: () => void;
-  onRefresh?: () => void;
+  onRefresh?: (rollbackResult?: RollbackResult) => void;
 }
 
 export default function VersionManagerPanel({
@@ -31,9 +32,9 @@ export default function VersionManagerPanel({
     setDiffModalOpen(true);
   };
 
-  const handleRollbackSuccess = () => {
+  const handleRollbackSuccess = (rollbackResult?: RollbackResult) => {
     message.success('版本回滚成功');
-    onRefresh?.();
+    onRefresh?.(rollbackResult);
   };
 
   return (
@@ -53,7 +54,7 @@ export default function VersionManagerPanel({
         <VersionTimeline
           templateId={templateId}
           currentVersion={currentVersion}
-          onRefresh={onRefresh}
+          onRefresh={handleRollbackSuccess}
           onCompare={handleCompare}
         />
       </Drawer>

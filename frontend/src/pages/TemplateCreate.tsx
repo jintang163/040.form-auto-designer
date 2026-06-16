@@ -23,7 +23,7 @@ import FieldEditor from '@/components/FieldEditor';
 import SchemaPreview from '@/components/SchemaPreview';
 import RecognitionProgress from '@/components/RecognitionProgress';
 import VersionManagerPanel from '@/components/VersionManagerPanel';
-import type { FieldConfig, FormField, RecognitionResult, FormSchema } from '@/types';
+import type { FieldConfig, FormField, RecognitionResult, FormSchema, RollbackResult } from '@/types';
 
 function SortableFieldItem({ field, selected, onClick, onDelete }: {
   field: FormField; selected: boolean; onClick: () => void; onDelete: () => void;
@@ -81,7 +81,7 @@ export default function TemplateCreate() {
     fields, currentTemplate, recognition, recognitionLoading,
     selectedFieldId, fetchFields, setCurrentTemplate, setRecognition,
     setRecognitionLoading, setSelectedFieldId, reorderFields, addFieldLocal,
-    updateFieldLocal, removeFieldLocal,
+    updateFieldLocal, removeFieldLocal, setFields,
   } = useFormStore();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -231,8 +231,20 @@ export default function TemplateCreate() {
     }
   };
 
-  const handleRefreshAfterVersion = () => {
-    if (id) {
+  const handleRefreshAfterVersion = (rollbackResult?: RollbackResult) => {
+    if (!id) return;
+
+    if (rollbackResult) {
+      setCurrentTemplate(rollbackResult.template);
+      templateForm.setFieldsValue({
+        name: rollbackResult.template.name,
+        code: rollbackResult.template.code,
+        description: rollbackResult.template.description,
+      });
+      setFields(rollbackResult.fields);
+      setSelectedFieldId(null);
+      message.success(`已回滚至 v${rollbackResult.newVersion}，字段已同步到编辑区`);
+    } else {
       templateApi.getTemplate(id).then((t) => {
         setCurrentTemplate(t);
         templateForm.setFieldsValue({ name: t.name, code: t.code, description: t.description });
