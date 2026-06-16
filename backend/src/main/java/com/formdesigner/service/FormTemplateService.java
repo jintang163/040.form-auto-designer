@@ -16,4 +16,8 @@ public interface FormTemplateService {
     List<FormTemplate> listAll();
 
     boolean deleteById(Long id);
+
+    FormTemplate publishTemplate(Long id);
+
+    FormTemplate copyTemplate(Long id);
 }

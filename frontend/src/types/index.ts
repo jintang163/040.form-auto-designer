@@ -68,8 +68,24 @@ export interface FormVersion {
   templateId: string;
   version: number;
   schemaJson: string;
-  changelog?: string;
+  changeLog?: string;
   createdAt: string;
+}
+
+export interface FieldDiff {
+  fieldName: string;
+  fieldLabel: string;
+  changeType: 'ADDED' | 'REMOVED' | 'MODIFIED';
+  oldValue?: string;
+  newValue?: string;
+}
+
+export interface VersionCompareResult {
+  sourceVersion: FormVersion;
+  targetVersion: FormVersion;
+  addedFields: FieldDiff[];
+  removedFields: FieldDiff[];
+  modifiedFields: FieldDiff[];
 }
 
 export type RecognitionStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';

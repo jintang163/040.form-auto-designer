@@ -43,4 +43,14 @@ public class FormTemplateController {
         formTemplateService.deleteById(id);
         return R.ok();
     }
+
+    @PostMapping("/{id}/publish")
+    public R<FormTemplate> publish(@PathVariable Long id) {
+        return R.ok(formTemplateService.publishTemplate(id));
+    }
+
+    @PostMapping("/{id}/copy")
+    public R<FormTemplate> copy(@PathVariable Long id) {
+        return R.ok(formTemplateService.copyTemplate(id));
+    }
 }

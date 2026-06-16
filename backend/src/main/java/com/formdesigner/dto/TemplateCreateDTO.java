@@ -12,5 +12,9 @@ public class TemplateCreateDTO {
     @NotBlank(message = "模板编码不能为空")
     private String templateCode;
 
+    private String description;
+
     private String schemaJson;
+
+    private String changeLog;
 }

@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Steps, Button, Upload, Card, Space, message, Spin, Row, Col,
-  List, Drawer, Form, Input, Modal, Empty,
+  List, Drawer, Form, Input, Modal, Empty, Tag,
 } from 'antd';
 import {
   UploadOutlined, PlusOutlined, DeleteOutlined,
-  HolderOutlined, SaveOutlined, SendOutlined,
+  HolderOutlined, SaveOutlined, SendOutlined, HistoryOutlined,
 } from '@ant-design/icons';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -22,6 +22,7 @@ import { recognitionResultToFormSchema, generateFormSchema } from '@/utils/schem
 import FieldEditor from '@/components/FieldEditor';
 import SchemaPreview from '@/components/SchemaPreview';
 import RecognitionProgress from '@/components/RecognitionProgress';
+import VersionManagerPanel from '@/components/VersionManagerPanel';
 import type { FieldConfig, FormField, RecognitionResult, FormSchema } from '@/types';
 
 function SortableFieldItem({ field, selected, onClick, onDelete }: {
@@ -90,6 +91,10 @@ export default function TemplateCreate() {
   const [rawText, setRawText] = useState<string>('');
   const [recognitionId, setRecognitionId] = useState<string>('');
   const [pollTimer, setPollTimer] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [versionPanelOpen, setVersionPanelOpen] = useState(false);
+  const [changelogModalOpen, setChangelogModalOpen] = useState(false);
+  const [changelogForm] = Form.useForm();
+  const [pendingAction, setPendingAction] = useState<'save' | 'publish' | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -179,13 +184,14 @@ export default function TemplateCreate() {
     updateFieldLocal(fieldId, data);
   };
 
-  const handleSave = async (publish: boolean) => {
+  const handleSave = async (publish: boolean, changeLog?: string) => {
     try {
       const values = await templateForm.validateFields();
       setSaving(true);
       const templateData = {
         ...values,
         schemaJson: JSON.stringify(schema),
+        changeLog,
       };
       if (isEdit && id) {
         await templateApi.updateTemplate(id, templateData);
@@ -206,12 +212,58 @@ export default function TemplateCreate() {
     }
   };
 
+  const openChangelogModal = (action: 'save' | 'publish') => {
+    setPendingAction(action);
+    changelogForm.resetFields();
+    setChangelogModalOpen(true);
+  };
+
+  const handleChangelogConfirm = async () => {
+    try {
+      const values = await changelogForm.validateFields();
+      setChangelogModalOpen(false);
+      if (pendingAction) {
+        await handleSave(pendingAction === 'publish', values.changeLog);
+      }
+      setPendingAction(null);
+    } catch (e: any) {
+      if (e.errorFields) return;
+    }
+  };
+
+  const handleRefreshAfterVersion = () => {
+    if (id) {
+      templateApi.getTemplate(id).then((t) => {
+        setCurrentTemplate(t);
+        templateForm.setFieldsValue({ name: t.name, code: t.code, description: t.description });
+      });
+      fetchFields(id);
+    }
+  };
+
   const selectedField = fields.find((f) => f.id === selectedFieldId);
 
   const steps = ['文件上传与识别', '字段配置', '保存与发布'];
 
   return (
     <div>
+      {isEdit && currentTemplate && (
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Space>
+            <Tag color="blue">v{currentTemplate.version}</Tag>
+            <Tag color={currentTemplate.status === 'PUBLISHED' ? 'green' : 'default'}>
+              {currentTemplate.status === 'PUBLISHED' ? '已发布' : currentTemplate.status === 'ARCHIVED' ? '已归档' : '草稿'}
+            </Tag>
+          </Space>
+          <Button
+            icon={<HistoryOutlined />}
+            onClick={() => setVersionPanelOpen(true)}
+          >
+            版本管理
+          </Button>
+        </div>
+      )}
+
       <Steps current={currentStep} items={steps.map((s) => ({ title: s }))} style={{ marginBottom: 24 }} />
 
       {currentStep === 0 && (
@@ -312,13 +364,46 @@ export default function TemplateCreate() {
           )}
           {currentStep === 2 && (
             <>
-              <Button icon={<SaveOutlined />} loading={saving} onClick={() => handleSave(false)}>保存草稿</Button>
-              <Button type="primary" icon={<SendOutlined />} loading={saving} onClick={() => handleSave(true)}>直接发布</Button>
+              <Button icon={<SaveOutlined />} loading={saving} onClick={() => openChangelogModal('save')}>保存草稿</Button>
+              <Button type="primary" icon={<SendOutlined />} loading={saving} onClick={() => openChangelogModal('publish')}>直接发布</Button>
             </>
           )}
           <Button onClick={() => navigate('/templates')}>取消</Button>
         </Space>
       </div>
+
+      <Modal
+        title={pendingAction === 'publish' ? '发布版本说明' : '保存版本说明'}
+        open={changelogModalOpen}
+        onOk={handleChangelogConfirm}
+        onCancel={() => { setChangelogModalOpen(false); setPendingAction(null); }}
+        okText={pendingAction === 'publish' ? '确认发布' : '确认保存'}
+        confirmLoading={saving}
+      >
+        <Form form={changelogForm} layout="vertical">
+          <Form.Item
+            name="changeLog"
+            label="版本说明"
+            rules={[{ required: true, message: '请输入版本说明' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder={pendingAction === 'publish' ? '描述本次发布的主要变更内容...' : '描述本次保存的主要变更内容...'}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {isEdit && currentTemplate && (
+        <VersionManagerPanel
+          templateId={currentTemplate.id}
+          templateName={currentTemplate.name}
+          currentVersion={currentTemplate.version}
+          open={versionPanelOpen}
+          onClose={() => setVersionPanelOpen(false)}
+          onRefresh={handleRefreshAfterVersion}
+        />
+      )}
     </div>
   );
 }

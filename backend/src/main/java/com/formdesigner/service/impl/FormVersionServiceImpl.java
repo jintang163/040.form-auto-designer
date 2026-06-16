@@ -1,18 +1,29 @@
 package com.formdesigner.service.impl;
 
+import com.formdesigner.dto.VersionRollbackDTO;
+import com.formdesigner.entity.FormTemplate;
 import com.formdesigner.entity.FormVersion;
+import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.mapper.FormVersionMapper;
 import com.formdesigner.service.FormVersionService;
+import com.formdesigner.util.SchemaDiffUtil;
+import com.formdesigner.vo.FieldDiffVO;
+import com.formdesigner.vo.VersionCompareResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class FormVersionServiceImpl implements FormVersionService {
 
     private final FormVersionMapper formVersionMapper;
+    private final FormTemplateMapper formTemplateMapper;
 
     @Override
     public FormVersion getById(Long id) {
@@ -27,5 +38,100 @@ public class FormVersionServiceImpl implements FormVersionService {
     @Override
     public FormVersion getByTemplateIdAndVersion(Long templateId, Integer version) {
         return formVersionMapper.selectByTemplateIdAndVersion(templateId, version);
+    }
+
+    @Override
+    @Transactional
+    public FormVersion createVersion(Long templateId, String changeLog) {
+        FormTemplate template = formTemplateMapper.selectById(templateId);
+        if (template == null) {
+            throw new IllegalArgumentException("模板不存在");
+        }
+
+        int newVersion = template.getVersion() + 1;
+        FormVersion version = new FormVersion();
+        version.setTemplateId(templateId);
+        version.setVersion(newVersion);
+        version.setSchemaJson(template.getSchemaJson());
+        version.setChangeLog(changeLog != null ? changeLog : "手动创建快照");
+        version.setCreatedAt(LocalDateTime.now());
+        formVersionMapper.insert(version);
+
+        template.setVersion(newVersion);
+        template.setUpdatedAt(LocalDateTime.now());
+        formTemplateMapper.updateById(template);
+
+        return version;
+    }
+
+    @Override
+    public VersionCompareResultVO compareVersions(Long templateId, Integer sourceVersion, Integer targetVersion) {
+        FormVersion source = formVersionMapper.selectByTemplateIdAndVersion(templateId, sourceVersion);
+        FormVersion target = formVersionMapper.selectByTemplateIdAndVersion(templateId, targetVersion);
+
+        if (source == null) {
+            throw new IllegalArgumentException("源版本不存在: v" + sourceVersion);
+        }
+        if (target == null) {
+            throw new IllegalArgumentException("目标版本不存在: v" + targetVersion);
+        }
+
+        List<FieldDiffVO> allDiffs = SchemaDiffUtil.compareSchemas(source.getSchemaJson(), target.getSchemaJson());
+
+        VersionCompareResultVO result = new VersionCompareResultVO();
+        result.setSourceVersion(source);
+        result.setTargetVersion(target);
+        result.setAddedFields(allDiffs.stream()
+                .filter(d -> "ADDED".equals(d.getChangeType()))
+                .collect(Collectors.toList()));
+        result.setRemovedFields(allDiffs.stream()
+                .filter(d -> "REMOVED".equals(d.getChangeType()))
+                .collect(Collectors.toList()));
+        result.setModifiedFields(allDiffs.stream()
+                .filter(d -> "MODIFIED".equals(d.getChangeType()))
+                .collect(Collectors.toList()));
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public FormTemplate rollbackVersion(Long templateId, VersionRollbackDTO dto) {
+        FormTemplate template = formTemplateMapper.selectById(templateId);
+        if (template == null) {
+            throw new IllegalArgumentException("模板不存在");
+        }
+
+        FormVersion targetVersion = formVersionMapper.selectByTemplateIdAndVersion(templateId, dto.getTargetVersion());
+        if (targetVersion == null) {
+            throw new IllegalArgumentException("目标版本不存在: v" + dto.getTargetVersion());
+        }
+
+        int currentVersionNum = template.getVersion();
+        int snapshotVersion = currentVersionNum + 1;
+        int rollbackVersionNum = currentVersionNum + 2;
+
+        FormVersion rollbackSnapshot = new FormVersion();
+        rollbackSnapshot.setTemplateId(templateId);
+        rollbackSnapshot.setVersion(snapshotVersion);
+        rollbackSnapshot.setSchemaJson(template.getSchemaJson());
+        rollbackSnapshot.setChangeLog("回滚前快照，目标版本 v" + dto.getTargetVersion());
+        rollbackSnapshot.setCreatedAt(LocalDateTime.now());
+        formVersionMapper.insert(rollbackSnapshot);
+
+        template.setSchemaJson(targetVersion.getSchemaJson());
+        template.setVersion(rollbackVersionNum);
+        template.setUpdatedAt(LocalDateTime.now());
+        formTemplateMapper.updateById(template);
+
+        FormVersion rollbackVersionRecord = new FormVersion();
+        rollbackVersionRecord.setTemplateId(templateId);
+        rollbackVersionRecord.setVersion(rollbackVersionNum);
+        rollbackVersionRecord.setSchemaJson(targetVersion.getSchemaJson());
+        rollbackVersionRecord.setChangeLog(dto.getChangeLog() != null ? dto.getChangeLog() : "回滚至版本 v" + dto.getTargetVersion());
+        rollbackVersionRecord.setCreatedAt(LocalDateTime.now());
+        formVersionMapper.insert(rollbackVersionRecord);
+
+        return template;
     }
 }

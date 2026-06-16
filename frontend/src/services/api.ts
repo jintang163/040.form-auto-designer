@@ -8,6 +8,7 @@ import type {
   FormVersion,
   RecognitionResult,
   FieldConfig,
+  VersionCompareResult,
 } from '@/types';
 
 const request = axios.create({
@@ -28,27 +29,82 @@ function unwrap<T>(res: ApiResponse<T>): T {
   return res.data;
 }
 
+function mapTemplateFromBackend(t: any): FormTemplate {
+  return {
+    id: String(t.id),
+    name: t.templateName,
+    code: t.templateCode,
+    description: t.description,
+    version: t.version,
+    status: t.status as FormTemplate['status'],
+    schemaJson: t.schemaJson,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  };
+}
+
+function mapTemplateToBackend(t: Partial<FormTemplate> & { changeLog?: string }): any {
+  return {
+    templateName: t.name,
+    templateCode: t.code,
+    description: t.description,
+    schemaJson: t.schemaJson,
+    status: t.status,
+    changeLog: t.changeLog,
+  };
+}
+
 export const templateApi = {
   getTemplates: (params?: { page?: number; pageSize?: number; keyword?: string }) =>
-    request.get<any, ApiResponse<PaginatedResult<FormTemplate>>>('/templates', { params }).then(unwrap),
+    request
+      .get<any, ApiResponse<any>>('/templates', { params })
+      .then(unwrap)
+      .then((r) => {
+        if (Array.isArray(r)) {
+          return {
+            list: r.map(mapTemplateFromBackend),
+            total: r.length,
+            page: params?.page || 1,
+            pageSize: params?.pageSize || r.length,
+          };
+        }
+        return {
+          list: r.list?.map(mapTemplateFromBackend) || [],
+          total: r.total || 0,
+          page: r.page || params?.page || 1,
+          pageSize: r.pageSize || params?.pageSize || 10,
+        };
+      }),
 
   getTemplate: (id: string) =>
-    request.get<any, ApiResponse<FormTemplate>>(`/templates/${id}`).then(unwrap),
+    request.get<any, ApiResponse<any>>(`/templates/${id}`).then(unwrap).then(mapTemplateFromBackend),
 
-  createTemplate: (data: Partial<FormTemplate>) =>
-    request.post<any, ApiResponse<FormTemplate>>('/templates', data).then(unwrap),
+  createTemplate: (data: Partial<FormTemplate> & { changeLog?: string }) =>
+    request
+      .post<any, ApiResponse<any>>('/templates', mapTemplateToBackend(data))
+      .then(unwrap)
+      .then(mapTemplateFromBackend),
 
-  updateTemplate: (id: string, data: Partial<FormTemplate>) =>
-    request.put<any, ApiResponse<FormTemplate>>(`/templates/${id}`, data).then(unwrap),
+  updateTemplate: (id: string, data: Partial<FormTemplate> & { changeLog?: string }) =>
+    request
+      .put<any, ApiResponse<any>>(`/templates/${id}`, mapTemplateToBackend(data))
+      .then(unwrap)
+      .then(mapTemplateFromBackend),
 
   deleteTemplate: (id: string) =>
     request.delete<any, ApiResponse<void>>(`/templates/${id}`).then(unwrap),
 
   publishTemplate: (id: string) =>
-    request.post<any, ApiResponse<FormTemplate>>(`/templates/${id}/publish`).then(unwrap),
+    request
+      .post<any, ApiResponse<any>>(`/templates/${id}/publish`)
+      .then(unwrap)
+      .then(mapTemplateFromBackend),
 
   copyTemplate: (id: string) =>
-    request.post<any, ApiResponse<FormTemplate>>(`/templates/${id}/copy`).then(unwrap),
+    request
+      .post<any, ApiResponse<any>>(`/templates/${id}/copy`)
+      .then(unwrap)
+      .then(mapTemplateFromBackend),
 };
 
 export const fieldApi = {
@@ -97,13 +153,56 @@ export const formDataApi = {
     request.get<any, ApiResponse<FormData>>(`/form-data/${formDataId}`).then(unwrap),
 };
 
+function mapVersionFromBackend(v: any): FormVersion {
+  return {
+    id: String(v.id),
+    templateId: String(v.templateId),
+    version: v.version,
+    schemaJson: v.schemaJson,
+    changeLog: v.changeLog,
+    createdAt: v.createdAt,
+  };
+}
+
 export const versionApi = {
   getVersions: (templateId: string) =>
-    request.get<any, ApiResponse<FormVersion[]>>(`/templates/${templateId}/versions`).then(unwrap),
+    request
+      .get<any, ApiResponse<any[]>>(`/templates/${templateId}/versions`)
+      .then(unwrap)
+      .then((list) => list.map(mapVersionFromBackend)),
 
-  createVersion: (templateId: string, changelog?: string) =>
-    request.post<any, ApiResponse<FormVersion>>(`/templates/${templateId}/versions`, { changelog }).then(unwrap),
+  createVersion: (templateId: string, changeLog?: string) =>
+    request
+      .post<any, ApiResponse<any>>(`/templates/${templateId}/versions`, { changeLog })
+      .then(unwrap)
+      .then(mapVersionFromBackend),
 
-  getVersion: (templateId: string, versionId: string) =>
-    request.get<any, ApiResponse<FormVersion>>(`/templates/${templateId}/versions/${versionId}`).then(unwrap),
+  getVersion: (templateId: string, version: number) =>
+    request
+      .get<any, ApiResponse<any>>(`/templates/${templateId}/versions/${version}`)
+      .then(unwrap)
+      .then(mapVersionFromBackend),
+
+  compareVersions: (templateId: string, sourceVersion: number, targetVersion: number) =>
+    request
+      .get<any, ApiResponse<any>>(`/templates/${templateId}/versions/compare`, {
+        params: { sourceVersion, targetVersion },
+      })
+      .then(unwrap)
+      .then((r) => ({
+        sourceVersion: mapVersionFromBackend(r.sourceVersion),
+        targetVersion: mapVersionFromBackend(r.targetVersion),
+        addedFields: r.addedFields,
+        removedFields: r.removedFields,
+        modifiedFields: r.modifiedFields,
+      })),
+
+  rollbackVersion: (templateId: string, targetVersion: number, changeLog?: string) =>
+    request
+      .post<any, ApiResponse<any>>(`/templates/${templateId}/versions/rollback`, {
+        targetVersion,
+        changeLog,
+      })
+      .then(unwrap)
+      .then(mapTemplateFromBackend),
 };

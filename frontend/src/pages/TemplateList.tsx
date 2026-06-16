@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Button, Space, Popconfirm, Tag, Input, message } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, HistoryOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useFormStore } from '@/store/formStore';
 import { templateApi } from '@/services/api';
-import type { TemplateStatus } from '@/types';
+import type { TemplateStatus, FormTemplate } from '@/types';
+import VersionManagerPanel from '@/components/VersionManagerPanel';
 
 const statusMap: Record<TemplateStatus, { color: string; text: string }> = {
   DRAFT: { color: 'default', text: '草稿' },
@@ -19,6 +20,8 @@ export default function TemplateList() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
+  const [versionPanelOpen, setVersionPanelOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
 
   useEffect(() => {
     fetchTemplates(page, pageSize, keyword);
@@ -79,10 +82,20 @@ export default function TemplateList() {
       title: '操作',
       key: 'actions',
       width: 280,
-      render: (_: any, record: any) => (
+      render: (_: any, record: FormTemplate) => (
         <Space size="small">
           <Button size="small" onClick={() => navigate(`/templates/${record.id}/edit`)}>编辑</Button>
           <Button size="small" onClick={() => navigate(`/templates/${record.id}/preview`)}>预览</Button>
+          <Button
+            size="small"
+            icon={<HistoryOutlined />}
+            onClick={() => {
+              setSelectedTemplate(record);
+              setVersionPanelOpen(true);
+            }}
+          >
+            版本
+          </Button>
           {record.status === 'DRAFT' && (
             <Popconfirm title="确认发布？" onConfirm={() => handlePublish(record.id)}>
               <Button size="small" type="primary">发布</Button>
@@ -123,6 +136,20 @@ export default function TemplateList() {
           onChange: (p, ps) => { setPage(p); setPageSize(ps); },
         }}
       />
+
+      {selectedTemplate && (
+        <VersionManagerPanel
+          templateId={selectedTemplate.id}
+          templateName={selectedTemplate.name}
+          currentVersion={selectedTemplate.version}
+          open={versionPanelOpen}
+          onClose={() => {
+            setVersionPanelOpen(false);
+            setSelectedTemplate(null);
+          }}
+          onRefresh={() => fetchTemplates(page, pageSize, keyword)}
+        />
+      )}
     </div>
   );
 }

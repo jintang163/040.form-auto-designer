@@ -9,9 +9,10 @@ public class FormTemplate {
     private Long id;
     private String templateName;
     private String templateCode;
+    private String description;
     private String schemaJson;
     private Integer version;
-    private Integer status;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

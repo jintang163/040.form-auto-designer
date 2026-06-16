@@ -6,7 +6,9 @@ import lombok.Data;
 public class TemplateUpdateDTO {
 
     private String templateName;
+    private String templateCode;
+    private String description;
     private String schemaJson;
-    private Integer status;
+    private String status;
     private String changeLog;
 }

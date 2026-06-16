@@ -27,9 +27,10 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         FormTemplate template = new FormTemplate();
         template.setTemplateName(dto.getTemplateName());
         template.setTemplateCode(dto.getTemplateCode());
+        template.setDescription(dto.getDescription());
         template.setSchemaJson(dto.getSchemaJson());
         template.setVersion(1);
-        template.setStatus(1);
+        template.setStatus("DRAFT");
         template.setCreatedAt(LocalDateTime.now());
         template.setUpdatedAt(LocalDateTime.now());
         formTemplateMapper.insert(template);
@@ -38,7 +39,7 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         version.setTemplateId(template.getId());
         version.setVersion(1);
         version.setSchemaJson(dto.getSchemaJson());
-        version.setChangeLog("初始创建");
+        version.setChangeLog(dto.getChangeLog() != null ? dto.getChangeLog() : "初始创建");
         version.setCreatedAt(LocalDateTime.now());
         formVersionMapper.insert(version);
 
@@ -52,18 +53,23 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         if (template == null) {
             throw new IllegalArgumentException("模板不存在");
         }
+        boolean hasSchemaChange = false;
         if (dto.getTemplateName() != null) {
             template.setTemplateName(dto.getTemplateName());
         }
+        if (dto.getDescription() != null) {
+            template.setDescription(dto.getDescription());
+        }
         if (dto.getSchemaJson() != null) {
             template.setSchemaJson(dto.getSchemaJson());
+            hasSchemaChange = true;
         }
         if (dto.getStatus() != null) {
             template.setStatus(dto.getStatus());
         }
         template.setUpdatedAt(LocalDateTime.now());
 
-        if (dto.getSchemaJson() != null) {
+        if (hasSchemaChange) {
             int newVersion = template.getVersion() + 1;
             template.setVersion(newVersion);
 
@@ -94,5 +100,58 @@ public class FormTemplateServiceImpl implements FormTemplateService {
     @Transactional
     public boolean deleteById(Long id) {
         return formTemplateMapper.deleteById(id) > 0;
+    }
+
+    @Override
+    @Transactional
+    public FormTemplate publishTemplate(Long id) {
+        FormTemplate template = formTemplateMapper.selectById(id);
+        if (template == null) {
+            throw new IllegalArgumentException("模板不存在");
+        }
+        template.setStatus("PUBLISHED");
+        template.setUpdatedAt(LocalDateTime.now());
+
+        int newVersion = template.getVersion() + 1;
+        template.setVersion(newVersion);
+        FormVersion version = new FormVersion();
+        version.setTemplateId(id);
+        version.setVersion(newVersion);
+        version.setSchemaJson(template.getSchemaJson());
+        version.setChangeLog("发布版本");
+        version.setCreatedAt(LocalDateTime.now());
+        formVersionMapper.insert(version);
+
+        formTemplateMapper.updateById(template);
+        return template;
+    }
+
+    @Override
+    @Transactional
+    public FormTemplate copyTemplate(Long id) {
+        FormTemplate source = formTemplateMapper.selectById(id);
+        if (source == null) {
+            throw new IllegalArgumentException("模板不存在");
+        }
+        FormTemplate copy = new FormTemplate();
+        copy.setTemplateName(source.getTemplateName() + "_副本");
+        copy.setTemplateCode(source.getTemplateCode() + "_copy_" + System.currentTimeMillis());
+        copy.setDescription(source.getDescription());
+        copy.setSchemaJson(source.getSchemaJson());
+        copy.setVersion(1);
+        copy.setStatus("DRAFT");
+        copy.setCreatedAt(LocalDateTime.now());
+        copy.setUpdatedAt(LocalDateTime.now());
+        formTemplateMapper.insert(copy);
+
+        FormVersion version = new FormVersion();
+        version.setTemplateId(copy.getId());
+        version.setVersion(1);
+        version.setSchemaJson(copy.getSchemaJson());
+        version.setChangeLog("复制自模板 " + source.getTemplateName() + "(v" + source.getVersion() + ")");
+        version.setCreatedAt(LocalDateTime.now());
+        formVersionMapper.insert(version);
+
+        return copy;
     }
 }
