@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS linkage_rule (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    template_id BIGINT NOT NULL COMMENT '所属模板ID',
+    rule_name VARCHAR(128) NOT NULL COMMENT '规则名称',
+    rule_type VARCHAR(32) NOT NULL COMMENT '规则类型: SHOW/HIDE/COMPUTE/DYNAMIC_OPTIONS/REQUIRED/DISABLED',
+    source_field VARCHAR(128) DEFAULT NULL COMMENT '触发字段名',
+    target_field VARCHAR(128) NOT NULL COMMENT '目标字段名',
+    condition_expr TEXT DEFAULT NULL COMMENT 'Aviator条件表达式',
+    action_type VARCHAR(32) DEFAULT NULL COMMENT '动作类型',
+    action_value VARCHAR(512) DEFAULT NULL COMMENT '动作值',
+    expression TEXT DEFAULT NULL COMMENT '计算表达式(Aviator)',
+    dynamic_options_url VARCHAR(512) DEFAULT NULL COMMENT '动态选项数据源URL',
+    sort_order INT DEFAULT 0 COMMENT '排序',
+    enabled TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+    tenant_id BIGINT DEFAULT NULL COMMENT '租户ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_linkage_template (template_id),
+    INDEX idx_linkage_source (template_id, source_field),
+    INDEX idx_linkage_target (template_id, target_field),
+    INDEX idx_linkage_tenant (tenant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字段联动规则';

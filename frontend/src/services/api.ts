@@ -22,6 +22,8 @@ import type {
   LoginResponse,
   OcrResult,
   OcrDocType,
+  LinkageRule,
+  LinkageEvaluateResult,
 } from '@/types';
 
 const request = axios.create({
@@ -454,6 +456,59 @@ export const tenantApi = {
 
   checkQuota: (tenantId: number, type: string) =>
     request.get<any, ApiResponse<boolean>>(`/tenants/${tenantId}/check-quota`, { params: { type } }).then(unwrap),
+};
+
+function mapLinkageRuleFromBackend(r: any): LinkageRule {
+  return {
+    id: String(r.id),
+    templateId: String(r.templateId),
+    ruleName: r.ruleName,
+    ruleType: r.ruleType,
+    sourceField: r.sourceField || '',
+    targetField: r.targetField,
+    conditionExpr: r.conditionExpr,
+    actionType: r.actionType,
+    actionValue: r.actionValue,
+    expression: r.expression,
+    dynamicOptionsUrl: r.dynamicOptionsUrl,
+    sortOrder: r.sortOrder ?? 0,
+    enabled: !!r.enabled,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  };
+}
+
+export const linkageApi = {
+  createRule: (data: Partial<LinkageRule>) =>
+    request.post<any, ApiResponse<any>>('/linkage-rules', data).then(unwrap).then(mapLinkageRuleFromBackend),
+
+  updateRule: (id: string, data: Partial<LinkageRule>) =>
+    request.put<any, ApiResponse<any>>('/linkage-rules', { ...data, id: Number(id) }).then(unwrap).then(mapLinkageRuleFromBackend),
+
+  deleteRule: (id: string) =>
+    request.delete<any, ApiResponse<void>>(`/linkage-rules/${id}`).then(unwrap),
+
+  getRule: (id: string) =>
+    request.get<any, ApiResponse<any>>(`/linkage-rules/${id}`).then(unwrap).then(mapLinkageRuleFromBackend),
+
+  listByTemplate: (templateId: string) =>
+    request.get<any, ApiResponse<any[]>>(`/linkage-rules/template/${templateId}`).then(unwrap).then((l) => (l || []).map(mapLinkageRuleFromBackend)),
+
+  listAll: () =>
+    request.get<any, ApiResponse<any[]>>('/linkage-rules').then(unwrap).then((l) => (l || []).map(mapLinkageRuleFromBackend)),
+
+  evaluate: (templateId: string, sourceField: string, fieldValues: Record<string, any>) =>
+    request.post<any, ApiResponse<LinkageEvaluateResult[]>>('/linkage-rules/evaluate', {
+      templateId: Number(templateId),
+      sourceField,
+      fieldValues,
+    }).then(unwrap),
+
+  evaluateAll: (templateId: string, fieldValues: Record<string, any>) =>
+    request.post<any, ApiResponse<LinkageEvaluateResult[]>>('/linkage-rules/evaluate', {
+      templateId: Number(templateId),
+      fieldValues,
+    }).then(unwrap),
 };
 
 export const authApi = {

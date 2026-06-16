@@ -37,7 +37,7 @@ export interface FieldConfig {
   options?: { label: string; value: string }[];
   linkageCondition?: {
     field: string;
-    operator: 'eq' | 'ne' | 'contains';
+    operator: 'eq' | 'ne' | 'contains' | 'gt' | 'lt';
     value: string;
   }[];
 }
@@ -292,4 +292,34 @@ export interface OcrResult {
   fields?: Record<string, string>;
   rawJson?: string;
   fieldItems?: OcrFieldItem[];
+}
+
+export type LinkageRuleType = 'SHOW' | 'HIDE' | 'COMPUTE' | 'DYNAMIC_OPTIONS' | 'REQUIRED' | 'DISABLED';
+
+export interface LinkageRule {
+  id: string;
+  templateId: string;
+  ruleName: string;
+  ruleType: LinkageRuleType;
+  sourceField: string;
+  targetField: string;
+  conditionExpr?: string;
+  actionType?: string;
+  actionValue?: string;
+  expression?: string;
+  dynamicOptionsUrl?: string;
+  sortOrder: number;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LinkageEvaluateResult {
+  targetField: string;
+  visible: boolean;
+  computedValue?: any;
+  dynamicOptions?: { label: string; value: string }[];
+  required: boolean;
+  disabled: boolean;
+  message?: string;
 }

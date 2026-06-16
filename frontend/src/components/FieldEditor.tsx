@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { Form, Input, Select, Switch, InputNumber, Button, Space, Card, Divider } from 'antd';
+import { Form, Input, Select, Switch, InputNumber, Button, Space, Card, Divider, Tag, Alert } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import type { FieldConfig, InputType, ValidationRule } from '@/types';
 
 interface FieldEditorProps {
   field: FieldConfig;
   onChange: (data: Partial<FieldConfig>) => void;
+  allFields?: FieldConfig[];
 }
 
 const inputTypeOptions: { label: string; value: InputType }[] = [
@@ -24,7 +25,7 @@ const validationTypeOptions: { label: string; value: ValidationRule['type'] }[] 
   { label: '自定义', value: 'custom' },
 ];
 
-export default function FieldEditor({ field, onChange }: FieldEditorProps) {
+export default function FieldEditor({ field, onChange, allFields }: FieldEditorProps) {
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -34,6 +35,10 @@ export default function FieldEditor({ field, onChange }: FieldEditorProps) {
   const handleValuesChange = (_: any, allValues: any) => {
     onChange(allValues);
   };
+
+  const fieldOptions = (allFields || [])
+    .filter((f) => f.fieldName !== field.fieldName)
+    .map((f) => ({ label: `${f.fieldLabel} (${f.fieldName})`, value: f.fieldName }));
 
   return (
     <Form
@@ -135,27 +140,53 @@ export default function FieldEditor({ field, onChange }: FieldEditorProps) {
         </Space>
       </Card>
 
-      <Card title="联动条件" size="small" style={{ marginTop: 12 }}>
+      <Card
+        title={
+          <Space>
+            联动条件
+            <Tag color="blue" style={{ fontSize: 11 }}>简易</Tag>
+          </Space>
+        }
+        size="small"
+        style={{ marginTop: 12 }}
+        extra={
+          <Alert
+            type="info"
+            message="高级联动规则请在「字段联动规则」面板配置"
+            style={{ padding: '2px 8px', fontSize: 12 }}
+            banner
+          />
+        }
+      >
         <Form.List name="linkageCondition">
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...rest }) => (
                 <Space key={key} style={{ display: 'flex' }} align="baseline">
                   <Form.Item {...rest} name={[name, 'field']}>
-                    <Input placeholder="关联字段" />
+                    <Select
+                      style={{ width: 160 }}
+                      options={fieldOptions}
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder="关联字段"
+                      allowClear
+                    />
                   </Form.Item>
                   <Form.Item {...rest} name={[name, 'operator']}>
                     <Select
-                      style={{ width: 80 }}
+                      style={{ width: 90 }}
                       options={[
                         { label: '等于', value: 'eq' },
                         { label: '不等于', value: 'ne' },
                         { label: '包含', value: 'contains' },
+                        { label: '大于', value: 'gt' },
+                        { label: '小于', value: 'lt' },
                       ]}
                     />
                   </Form.Item>
                   <Form.Item {...rest} name={[name, 'value']}>
-                    <Input placeholder="值" />
+                    <Input placeholder="值" style={{ width: 120 }} />
                   </Form.Item>
                   <MinusCircleOutlined onClick={() => remove(name)} />
                 </Space>

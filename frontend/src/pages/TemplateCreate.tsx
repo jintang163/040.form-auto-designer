@@ -24,6 +24,7 @@ import SchemaPreview from '@/components/SchemaPreview';
 import RecognitionProgress from '@/components/RecognitionProgress';
 import VersionManagerPanel from '@/components/VersionManagerPanel';
 import OcrImageUploader from '@/components/OcrImageUploader';
+import LinkageRuleConfig from '@/components/LinkageRuleConfig';
 import type { FieldConfig, FormField, RecognitionResult, FormSchema, RollbackResult, OcrFieldItem } from '@/types';
 
 function SortableFieldItem({ field, selected, onClick, onDelete }: {
@@ -368,19 +369,25 @@ export default function TemplateCreate() {
               </DndContext>
               {fields.length === 0 && <Empty description="暂无字段" />}
             </Card>
+            {isEdit && id && (
+              <div style={{ marginTop: 12 }}>
+                <LinkageRuleConfig templateId={id} fields={fields} />
+              </div>
+            )}
           </Col>
           <Col span={8}>
             {selectedField ? (
               <FieldEditor
                 field={selectedField}
                 onChange={(data) => handleFieldChange(selectedField.id, data)}
+                allFields={fields}
               />
             ) : (
               <Card size="small"><Empty description="选择字段进行编辑" /></Card>
             )}
           </Col>
           <Col span={8}>
-            <SchemaPreview schema={schema} />
+            <SchemaPreview schema={schema} templateId={isEdit && id ? id : undefined} />
           </Col>
         </Row>
       )}
@@ -388,7 +395,7 @@ export default function TemplateCreate() {
       {currentStep === 2 && (
         <Row gutter={24}>
           <Col span={14}>
-            <SchemaPreview schema={schema} />
+            <SchemaPreview schema={schema} templateId={isEdit && id ? id : undefined} />
           </Col>
           <Col span={10}>
             <Card title="模板信息" size="small">

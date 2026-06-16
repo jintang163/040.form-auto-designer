@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.LinkageRuleMapper">
+
+    <resultMap id="LinkageRuleResultMap" type="com.formdesigner.entity.LinkageRule">
+        <id column="id" property="id"/>
+        <result column="template_id" property="templateId"/>
+        <result column="rule_name" property="ruleName"/>
+        <result column="rule_type" property="ruleType"/>
+        <result column="source_field" property="sourceField"/>
+        <result column="target_field" property="targetField"/>
+        <result column="condition_expr" property="conditionExpr"/>
+        <result column="action_type" property="actionType"/>
+        <result column="action_value" property="actionValue"/>
+        <result column="expression" property="expression"/>
+        <result column="dynamic_options_url" property="dynamicOptionsUrl"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="enabled" property="enabled"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="baseColumns">
+        id, template_id, rule_name, rule_type, source_field, target_field, condition_expr,
+        action_type, action_value, expression, dynamic_options_url, sort_order, enabled,
+        tenant_id, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.formdesigner.entity.LinkageRule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO linkage_rule (template_id, rule_name, rule_type, source_field, target_field,
+            condition_expr, action_type, action_value, expression, dynamic_options_url,
+            sort_order, enabled, tenant_id, created_at, updated_at)
+        VALUES (#{templateId}, #{ruleName}, #{ruleType}, #{sourceField}, #{targetField},
+            #{conditionExpr}, #{actionType}, #{actionValue}, #{expression}, #{dynamicOptionsUrl},
+            #{sortOrder}, #{enabled}, #{tenantId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="updateById" parameterType="com.formdesigner.entity.LinkageRule">
+        UPDATE linkage_rule
+        <set>
+            <if test="ruleName != null">rule_name = #{ruleName},</if>
+            <if test="ruleType != null">rule_type = #{ruleType},</if>
+            <if test="sourceField != null">source_field = #{sourceField},</if>
+            <if test="targetField != null">target_field = #{targetField},</if>
+            <if test="conditionExpr != null">condition_expr = #{conditionExpr},</if>
+            <if test="actionType != null">action_type = #{actionType},</if>
+            <if test="actionValue != null">action_value = #{actionValue},</if>
+            <if test="expression != null">expression = #{expression},</if>
+            <if test="dynamicOptionsUrl != null">dynamic_options_url = #{dynamicOptionsUrl},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="enabled != null">enabled = #{enabled},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
+            updated_at = NOW(),
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM linkage_rule WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="LinkageRuleResultMap">
+        SELECT <include refid="baseColumns"/>
+        FROM linkage_rule WHERE id = #{id} AND tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectByTemplateId" resultMap="LinkageRuleResultMap">
+        SELECT <include refid="baseColumns"/>
+        FROM linkage_rule WHERE template_id = #{templateId} AND tenant_id = #{tenantId}
+        ORDER BY sort_order, id
+    </select>
+
+    <select id="selectByTargetField" resultMap="LinkageRuleResultMap">
+        SELECT <include refid="baseColumns"/>
+        FROM linkage_rule WHERE template_id = #{templateId} AND target_field = #{targetField}
+            AND tenant_id = #{tenantId} AND enabled = 1
+        ORDER BY sort_order, id
+    </select>
+
+    <select id="selectBySourceField" resultMap="LinkageRuleResultMap">
+        SELECT <include refid="baseColumns"/>
+        FROM linkage_rule WHERE template_id = #{templateId} AND source_field = #{sourceField}
+            AND tenant_id = #{tenantId} AND enabled = 1
+        ORDER BY sort_order, id
+    </select>
+
+    <select id="selectAll" resultMap="LinkageRuleResultMap">
+        SELECT <include refid="baseColumns"/>
+        FROM linkage_rule WHERE tenant_id = #{tenantId} ORDER BY template_id, sort_order, id
+    </select>
+
+</mapper>

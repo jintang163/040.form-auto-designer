@@ -29,6 +29,7 @@
         <hutool.version>5.8.22</hutool.version>
         <kingbase.version>8.6.0</kingbase.version>
         <clickhouse.version>0.4.6</clickhouse.version>
+        <aviator.version>5.4.3</aviator.version>
     </properties>
 
     <dependencies>
@@ -132,6 +133,12 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.googlecode.aviator</groupId>
+            <artifactId>aviator</artifactId>
+            <version>${aviator.version}</version>
         </dependency>
 
         <dependency>
