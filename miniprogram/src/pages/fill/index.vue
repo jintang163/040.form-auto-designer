@@ -17,7 +17,7 @@
           v-model="formData"
           :errors="fieldErrors"
           :enable-voice="true"
-          :voice-mock-mode="true"
+          :voice-mock-mode="voiceMockMode"
           @field-change="onFieldChange"
           @voice-fill="onVoiceFill"
           @voice-error="onVoiceError"
@@ -28,7 +28,7 @@
         <VoiceInput
           :fields="allFields"
           :enable-multiple="true"
-          :mock-mode="true"
+          :mock-mode="voiceMockMode"
           @fill="onGlobalVoiceFill"
           @error="onVoiceError"
         />
@@ -94,6 +94,8 @@ const currentPage = ref(0)
 const fieldErrors = ref<Record<string, string>>({})
 const dynamicFormRef = ref<InstanceType<typeof DynamicForm> | null>(null)
 const showVoiceTip = ref(true)
+
+const voiceMockMode = false
 
 let templateId = ''
 let templateName = ''

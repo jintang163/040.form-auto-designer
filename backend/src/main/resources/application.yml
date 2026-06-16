@@ -56,6 +56,14 @@ grpc:
       host: localhost
       port: 50051
 
+voice:
+  asr:
+    mock: true
+    provider: mock
+    api-key:
+    secret-key:
+    app-id:
+
 logging:
   level:
     root: INFO
