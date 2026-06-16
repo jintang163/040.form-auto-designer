@@ -51,6 +51,13 @@
         ORDER BY submitted_at DESC
     </select>
 
+    <select id="selectBySubmitterId" resultType="com.formdesigner.entity.FormData">
+        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
+        FROM form_data
+        WHERE template_id = #{templateId} AND submitter_id = #{submitterId}
+        ORDER BY submitted_at DESC
+    </select>
+
     <delete id="deleteById">
         DELETE FROM form_data WHERE id = #{id}
     </delete>

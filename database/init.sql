@@ -290,3 +290,35 @@ COMMENT ON COLUMN webhook_rule.updated_at IS '更新时间';
 
 CREATE INDEX idx_webhook_rule_template_id ON webhook_rule (template_id);
 CREATE INDEX idx_webhook_rule_enabled ON webhook_rule (enabled);
+
+-- ============================================================
+-- 9. 字段值频率统计表 form_field_value_stats
+-- 用于智能推荐：按用户+模板+字段聚合高频填写值
+-- ============================================================
+CREATE TABLE IF NOT EXISTS form_field_value_stats (
+    id              BIGINT          NOT NULL AUTO_INCREMENT,
+    template_id     BIGINT          NOT NULL,
+    field_name      VARCHAR(100)    NOT NULL,
+    field_value     VARCHAR(500)    NOT NULL,
+    submitter_id    VARCHAR(100)    NOT NULL DEFAULT '__GLOBAL__',
+    frequency       INT             DEFAULT 1,
+    last_used_at    TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_field_value_stats PRIMARY KEY (id),
+    CONSTRAINT uk_stats_unique UNIQUE (template_id, field_name, field_value, submitter_id)
+);
+
+COMMENT ON TABLE form_field_value_stats IS '字段值频率统计表(智能推荐)';
+COMMENT ON COLUMN form_field_value_stats.id IS '主键ID';
+COMMENT ON COLUMN form_field_value_stats.template_id IS '所属模板ID';
+COMMENT ON COLUMN form_field_value_stats.field_name IS '字段名称';
+COMMENT ON COLUMN form_field_value_stats.field_value IS '字段值';
+COMMENT ON COLUMN form_field_value_stats.submitter_id IS '提交人ID, __GLOBAL__表示全局统计';
+COMMENT ON COLUMN form_field_value_stats.frequency IS '出现次数';
+COMMENT ON COLUMN form_field_value_stats.last_used_at IS '最后使用时间';
+COMMENT ON COLUMN form_field_value_stats.updated_at IS '更新时间';
+
+CREATE INDEX idx_fvs_template_field ON form_field_value_stats (template_id, field_name);
+CREATE INDEX idx_fvs_submitter ON form_field_value_stats (submitter_id);
+CREATE INDEX idx_fvs_template_field_submitter ON form_field_value_stats (template_id, field_name, submitter_id);
+CREATE INDEX idx_fvs_frequency ON form_field_value_stats (frequency DESC);

@@ -14,6 +14,8 @@ import type {
   FieldDistribution,
   NumericAggregation,
   WebhookRule,
+  FormRecommendation,
+  FieldRecommendation,
 } from '@/types';
 
 const request = axios.create({
@@ -211,6 +213,21 @@ export const statisticsApi = {
     request.get<any, ApiResponse<NumericAggregation>>('/statistics/numeric-aggregation', {
       params: { templateId, fieldName },
     }).then(unwrap),
+};
+
+export const recommendApi = {
+  getFormRecommendations: (templateId: string, submitterId?: string) =>
+    request.get<any, ApiResponse<FormRecommendation>>(`/smart-recommend/form/${templateId}`, {
+      params: submitterId ? { submitterId } : {},
+    }).then(unwrap),
+
+  getFieldRecommendations: (templateId: string, fieldName: string, submitterId?: string) =>
+    request.get<any, ApiResponse<FieldRecommendation[]>>('/smart-recommend/field', {
+      params: { templateId, fieldName, ...(submitterId ? { submitterId } : {}) },
+    }).then(unwrap),
+
+  rebuildStats: (templateId: string) =>
+    request.post<any, ApiResponse<void>>(`/smart-recommend/rebuild/${templateId}`).then(unwrap),
 };
 
 export const webhookApi = {

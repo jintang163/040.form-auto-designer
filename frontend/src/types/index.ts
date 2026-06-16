@@ -191,3 +191,25 @@ export interface WebhookRule {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RecommendedItem {
+  value: string;
+  frequency: number;
+  score: number;
+  source: string;
+}
+
+export interface FieldRecommendation {
+  fieldName: string;
+  fieldLabel: string;
+  inputType: string;
+  recommendedValue: string;
+  confidence: number;
+  items: RecommendedItem[];
+}
+
+export interface FormRecommendation {
+  templateId: number;
+  submitterId: string;
+  fields: FieldRecommendation[];
+}

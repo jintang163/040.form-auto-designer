@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FieldValueStatsMapper">
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FieldValueStats" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_field_value_stats (template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at)
+        VALUES (#{templateId}, #{fieldName}, #{fieldValue}, #{submitterId}, #{frequency}, #{lastUsedAt}, #{updatedAt})
+    </insert>
+
+    <insert id="upsertIncrement" parameterType="com.formdesigner.entity.FieldValueStats">
+        INSERT INTO form_field_value_stats (template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at)
+        VALUES (#{templateId}, #{fieldName}, #{fieldValue}, #{submitterId}, 1, #{lastUsedAt}, #{updatedAt})
+        ON DUPLICATE KEY UPDATE
+            frequency = frequency + 1,
+            last_used_at = #{lastUsedAt},
+            updated_at = #{updatedAt}
+    </insert>
+
+    <select id="selectByUniqueKey" resultType="com.formdesigner.entity.FieldValueStats">
+        SELECT id, template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at
+        FROM form_field_value_stats
+        WHERE template_id = #{templateId} AND field_name = #{fieldName}
+              AND field_value = #{fieldValue} AND submitter_id = #{submitterId}
+    </select>
+
+    <select id="selectByTemplateIdAndFieldName" resultType="com.formdesigner.entity.FieldValueStats">
+        SELECT id, template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at
+        FROM form_field_value_stats
+        WHERE template_id = #{templateId} AND field_name = #{fieldName} AND submitter_id = #{submitterId}
+        ORDER BY frequency DESC, last_used_at DESC
+    </select>
+
+    <select id="selectByTemplateIdAndFieldNameGlobal" resultType="com.formdesigner.entity.FieldValueStats">
+        SELECT id, template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at
+        FROM form_field_value_stats
+        WHERE template_id = #{templateId} AND field_name = #{fieldName} AND submitter_id = '__GLOBAL__'
+        ORDER BY frequency DESC, last_used_at DESC
+    </select>
+
+    <select id="selectTopNBySubmitter" resultType="com.formdesigner.entity.FieldValueStats">
+        SELECT id, template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at
+        FROM form_field_value_stats
+        WHERE template_id = #{templateId} AND field_name = #{fieldName} AND submitter_id = #{submitterId}
+        ORDER BY frequency DESC, last_used_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectTopNGlobal" resultType="com.formdesigner.entity.FieldValueStats">
+        SELECT id, template_id, field_name, field_value, submitter_id, frequency, last_used_at, updated_at
+        FROM form_field_value_stats
+        WHERE template_id = #{templateId} AND field_name = #{fieldName} AND submitter_id = '__GLOBAL__'
+        ORDER BY frequency DESC, last_used_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <delete id="deleteByTemplateId">
+        DELETE FROM form_field_value_stats WHERE template_id = #{templateId}
+    </delete>
+
+</mapper>

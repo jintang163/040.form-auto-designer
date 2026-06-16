@@ -10,6 +10,7 @@ import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.service.FormDataService;
 import com.formdesigner.service.DataStatisticsService;
+import com.formdesigner.service.SmartRecommendService;
 import com.formdesigner.service.WebhookRuleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class FormDataServiceImpl implements FormDataService {
     private final FormFieldMapper formFieldMapper;
     private final WebhookRuleService webhookRuleService;
     private final DataStatisticsService dataStatisticsService;
+    private final SmartRecommendService smartRecommendService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -55,6 +57,12 @@ public class FormDataServiceImpl implements FormDataService {
             webhookRuleService.triggerWebhooks(dto.getTemplateId(), dto.getFieldValuesJson());
         } catch (Exception e) {
             log.warn("Webhook推送异常: {}", e.getMessage());
+        }
+
+        try {
+            smartRecommendService.recordSubmission(dto.getTemplateId(), dto.getSubmitterId(), dto.getFieldValuesJson());
+        } catch (Exception e) {
+            log.warn("智能推荐统计记录异常: {}", e.getMessage());
         }
 
         return formData;

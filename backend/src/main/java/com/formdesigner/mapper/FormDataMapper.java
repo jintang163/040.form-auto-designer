@@ -30,5 +30,8 @@ public interface FormDataMapper {
                                               @Param("fieldName") String fieldName,
                                               @Param("fieldValue") String fieldValue);
 
+    List<FormData> selectBySubmitterId(@Param("templateId") Long templateId,
+                                        @Param("submitterId") String submitterId);
+
     int deleteById(@Param("id") Long id);
 }
