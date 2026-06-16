@@ -34,4 +34,7 @@ public interface FieldValueStatsMapper {
                                             @Param("limit") int limit);
 
     int deleteByTemplateId(@Param("templateId") Long templateId);
+
+    List<FieldValueStats> selectAllPerUserByTemplateIdAndFieldName(@Param("templateId") Long templateId,
+                                                                     @Param("fieldName") String fieldName);
 }

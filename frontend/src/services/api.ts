@@ -174,8 +174,22 @@ export const recognitionApi = {
 };
 
 export const formDataApi = {
-  submitFormData: (templateId: string, data: Record<string, any>) =>
-    request.post<any, ApiResponse<FormData>>(`/form-data/${templateId}`, data).then(unwrap),
+  submitFormData: (templateId: string, data: Record<string, any>, submitterId?: string) => {
+    const fieldValues: Record<string, any> = {};
+    let sid = submitterId;
+    Object.entries(data).forEach(([k, v]) => {
+      if (k === '__submitterId') {
+        sid = String(v);
+      } else {
+        fieldValues[k] = v;
+      }
+    });
+    return request.post<any, ApiResponse<FormData>>('/form-data', {
+      templateId: Number(templateId),
+      fieldValuesJson: JSON.stringify(fieldValues),
+      submitterId: sid,
+    }).then(unwrap);
+  },
 
   getFormDataList: (templateId: string, params?: { page?: number; pageSize?: number }) =>
     request.get<any, ApiResponse<PaginatedResult<FormData>>>(`/form-data/${templateId}/list`, { params }).then(unwrap),

@@ -182,13 +182,16 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
 
     private Map<String, Double> computeCollaborativeFiltering(Long templateId, String fieldName, String submitterId) {
         List<FormData> userHistory = formDataMapper.selectBySubmitterId(templateId, submitterId);
-        if (userHistory.isEmpty()) return Collections.emptyMap();
 
-        Map<String, Integer> userProfile = buildFieldProfile(userHistory, fieldName);
+        Map<String, Integer> userProfile = buildFieldProfileFromStats(templateId, fieldName, submitterId);
+        if (userProfile.isEmpty() && !userHistory.isEmpty()) {
+            userProfile = buildFieldProfile(userHistory, fieldName);
+        }
+        if (userProfile.isEmpty()) return Collections.emptyMap();
 
-        List<FieldValueStats> allUserStats = statsMapper.selectByTemplateIdAndFieldNameGlobal(templateId, fieldName);
+        List<FieldValueStats> allPerUserStats = statsMapper.selectAllPerUserByTemplateIdAndFieldName(templateId, fieldName);
         Map<String, Map<String, Integer>> otherUserProfiles = new HashMap<>();
-        for (FieldValueStats stat : allUserStats) {
+        for (FieldValueStats stat : allPerUserStats) {
             otherUserProfiles
                     .computeIfAbsent(stat.getSubmitterId(), k -> new HashMap<>())
                     .put(stat.getFieldValue(), stat.getFrequency());
@@ -242,6 +245,18 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
                     }
                 }
             } catch (Exception ignored) {}
+        }
+        return profile;
+    }
+
+    private Map<String, Integer> buildFieldProfileFromStats(Long templateId, String fieldName, String submitterId) {
+        Map<String, Integer> profile = new HashMap<>();
+        List<FieldValueStats> userStats = statsMapper.selectByTemplateIdAndFieldName(
+                templateId, fieldName, submitterId);
+        for (FieldValueStats s : userStats) {
+            if (s.getFieldValue() != null && !s.getFieldValue().trim().isEmpty()) {
+                profile.put(s.getFieldValue(), s.getFrequency() != null ? s.getFrequency() : 1);
+            }
         }
         return profile;
     }

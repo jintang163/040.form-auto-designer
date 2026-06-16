@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Spin, message, Input, Select, Tooltip, Tag, Space, InputNumber } from 'antd';
-import { BulbOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Spin, message, Tooltip, Tag, Space } from 'antd';
+import { BulbOutlined, ReloadOutlined, UserOutlined } from '@ant-design/icons';
 import { templateApi, formDataApi, fieldApi, recommendApi } from '@/services/api';
 import { generateFormSchema } from '@/utils/schemaTransform';
-import SchemaPreview from '@/components/SchemaPreview';
+import SchemaPreview, { type SchemaPreviewRef } from '@/components/SchemaPreview';
+import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import type { FormField, FormSchema, FieldRecommendation } from '@/types';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
@@ -16,21 +17,20 @@ const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
 export default function TemplatePreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const schemaPreviewRef = useRef<SchemaPreviewRef>(null);
   const [schema, setSchema] = useState<FormSchema>({ type: 'object', properties: {} });
   const [loading, setLoading] = useState(true);
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<FormField[]>([]);
   const [recommendations, setRecommendations] = useState<Record<string, FieldRecommendation>>({});
   const [recommendLoading, setRecommendLoading] = useState(false);
-  const [submitterId] = useState(() => localStorage.getItem('fd_submitter_id') || 'current_user');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const submitterId = useRef<string>(getOrCreateSubmitterId());
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    Promise.all([
-      templateApi.getTemplate(id),
-      fieldApi.getFields(id),
-    ])
+    Promise.all([templateApi.getTemplate(id), fieldApi.getFields(id)])
       .then(([template, fs]) => {
         setTemplateName(template.name);
         setFields(fs);
@@ -53,7 +53,8 @@ export default function TemplatePreview() {
   const loadRecommendations = useCallback(() => {
     if (!id) return;
     setRecommendLoading(true);
-    recommendApi.getFormRecommendations(id, submitterId)
+    recommendApi
+      .getFormRecommendations(id, submitterId.current)
       .then((data) => {
         const map: Record<string, FieldRecommendation> = {};
         (data.fields || []).forEach((f) => {
@@ -65,18 +66,35 @@ export default function TemplatePreview() {
         console.warn('加载推荐失败:', e.message);
       })
       .finally(() => setRecommendLoading(false));
-  }, [id, submitterId]);
+  }, [id]);
 
   useEffect(() => {
     if (fields.length > 0 && id) {
       loadRecommendations();
     }
-  }, [fields.length, id]);
+  }, [fields.length, id, loadRecommendations]);
+
+  const applyRecommendation = useCallback((fieldName: string, value: string) => {
+    if (schemaPreviewRef.current) {
+      const field = fields.find((f) => f.fieldName === fieldName);
+      let typedValue: any = value;
+      if (field?.inputType === 'number') {
+        const num = Number(value);
+        if (!Number.isNaN(num)) {
+          typedValue = num;
+        }
+      }
+      schemaPreviewRef.current.setFieldValue(fieldName, typedValue);
+      message.success(`已填入 ${field?.fieldLabel || fieldName}: ${value}`);
+    } else {
+      message.info(`已选择推荐值: ${value}`);
+    }
+  }, [fields]);
 
   const handleSubmit = async (values: Record<string, any>) => {
     if (!id) return;
     try {
-      await formDataApi.submitFormData(id, values);
+      await formDataApi.submitFormData(id, values, submitterId.current);
       message.success('提交成功');
       loadRecommendations();
     } catch (e: any) {
@@ -84,17 +102,46 @@ export default function TemplatePreview() {
     }
   };
 
-  const applyRecommendation = (fieldName: string, value: string) => {
-    message.info(`已选择推荐值: ${value}`);
-  };
+  const handleFieldFocus = useCallback((fieldName: string) => {
+    setFocusedField(fieldName);
+    const rec = recommendations[fieldName];
+    if (rec && schemaPreviewRef.current) {
+      const currentVal = schemaPreviewRef.current.getFieldValue(fieldName);
+      if (currentVal == null || currentVal === '') {
+        const field = fields.find((f) => f.fieldName === fieldName);
+        let typedValue: any = rec.recommendedValue;
+        if (field?.inputType === 'number') {
+          const num = Number(rec.recommendedValue);
+          if (!Number.isNaN(num)) {
+            typedValue = num;
+          }
+        }
+        schemaPreviewRef.current.setFieldValue(fieldName, typedValue);
+      }
+    }
+  }, [recommendations, fields]);
 
   if (loading) return <Spin />;
 
+  const focusedRec = focusedField ? recommendations[focusedField] : null;
+
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <h3 style={{ margin: 0 }}>{templateName} - 表单预览</h3>
         <Space>
+          <Tooltip title={`提交人ID: ${submitterId.current}`}>
+            <Tag icon={<UserOutlined />}>
+              用户: {submitterId.current.slice(0, 8)}...
+            </Tag>
+          </Tooltip>
           <Tooltip title="刷新智能推荐">
             <Button
               icon={<ReloadOutlined />}
@@ -109,19 +156,34 @@ export default function TemplatePreview() {
       </div>
 
       {Object.keys(recommendations).length > 0 && (
-        <div style={{
-          marginBottom: 16, padding: '12px 16px', background: '#f6ffed',
-          border: '1px solid #b7eb8f', borderRadius: 8,
-        }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            background: '#f6ffed',
+            border: '1px solid #b7eb8f',
+            borderRadius: 8,
+          }}
+        >
           <div style={{ marginBottom: 8, fontWeight: 500, color: '#52c41a' }}>
-            <BulbOutlined /> 智能推荐
+            <BulbOutlined /> 智能推荐（点击填入，聚焦字段自动填入上次值）
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {Object.values(recommendations).map((rec) => (
-              <div key={rec.fieldName} style={{
-                padding: '4px 12px', background: '#fff', borderRadius: 4,
-                border: '1px solid #d9d9d9', fontSize: 13,
-              }}>
+              <div
+                key={rec.fieldName}
+                style={{
+                  padding: '4px 12px',
+                  background: focusedField === rec.fieldName ? '#e6f7ff' : '#fff',
+                  border: focusedField === rec.fieldName
+                    ? '2px solid #91d5ff'
+                    : '1px solid #d9d9d9',
+                  borderRadius: 4,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+                onClick={() => applyRecommendation(rec.fieldName, rec.recommendedValue)}
+              >
                 <span style={{ color: '#666', marginRight: 4 }}>{rec.fieldLabel}:</span>
                 <span style={{ fontWeight: 500 }}>{rec.recommendedValue}</span>
                 <Tag
@@ -143,18 +205,48 @@ export default function TemplatePreview() {
 
       <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: 1 }}>
-          <SchemaPreview schema={schema} editable onSubmit={handleSubmit} />
+          <SchemaPreview
+            ref={schemaPreviewRef}
+            schema={schema}
+            editable
+            onSubmit={handleSubmit}
+            onFieldFocus={handleFieldFocus}
+          />
         </div>
 
         {Object.keys(recommendations).length > 0 && (
           <div style={{ width: 280, flexShrink: 0 }}>
-            <div style={{
-              background: '#fafafa', borderRadius: 8, padding: 16,
-              border: '1px solid #f0f0f0', maxHeight: 600, overflowY: 'auto',
-            }}>
+            <div
+              style={{
+                background: '#fafafa',
+                borderRadius: 8,
+                padding: 16,
+                border: '1px solid #f0f0f0',
+                maxHeight: 600,
+                overflowY: 'auto',
+              }}
+            >
               <h4 style={{ marginTop: 0, marginBottom: 12 }}>
                 <BulbOutlined style={{ color: '#faad14' }} /> 推荐候选值
               </h4>
+              {focusedRec && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    marginBottom: 12,
+                    background: '#fff7e6',
+                    border: '1px solid #ffe7ba',
+                    borderRadius: 6,
+                  }}
+                >
+                  <div style={{ fontWeight: 500, color: '#fa8c16', marginBottom: 4 }}>
+                    当前聚焦字段：{focusedRec.fieldLabel}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    已自动填入推荐值
+                  </div>
+                </div>
+              )}
               {Object.values(recommendations).map((rec) => (
                 <div key={rec.fieldName} style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>
