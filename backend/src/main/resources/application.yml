@@ -64,6 +64,12 @@ voice:
     secret-key:
     app-id:
 
+clickhouse:
+  url: jdbc:clickhouse://localhost:8123/form_analytics
+  username: default
+  password:
+  driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+
 logging:
   level:
     root: INFO

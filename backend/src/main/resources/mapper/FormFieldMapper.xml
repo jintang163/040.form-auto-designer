@@ -49,4 +49,9 @@
         DELETE FROM form_field WHERE template_id = #{templateId}
     </delete>
 
+    <select id="selectByTemplateIdAndFieldName" resultType="com.formdesigner.entity.FormField">
+        SELECT id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config
+        FROM form_field WHERE template_id = #{templateId} AND field_name = #{fieldName}
+    </select>
+
 </mapper>

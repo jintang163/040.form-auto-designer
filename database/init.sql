@@ -256,3 +256,37 @@ COMMENT ON COLUMN recognition_task.completed_at IS '完成时间';
 CREATE INDEX idx_recognition_task_status ON recognition_task (status);
 CREATE INDEX idx_recognition_task_file_id ON recognition_task (file_id);
 CREATE INDEX idx_recognition_task_created_at ON recognition_task (created_at);
+
+-- ============================================================
+-- 8. Webhook推送规则表 webhook_rule
+-- ============================================================
+CREATE TABLE IF NOT EXISTS webhook_rule (
+    id              BIGINT          NOT NULL AUTO_INCREMENT,
+    rule_name       VARCHAR(200)    NOT NULL,
+    template_id     BIGINT          NOT NULL,
+    webhook_url     VARCHAR(1000)   NOT NULL,
+    http_method     VARCHAR(10)     DEFAULT 'POST',
+    headers_json    TEXT,
+    enabled         SMALLINT        DEFAULT 1,
+    created_by      VARCHAR(100),
+    created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_webhook_rule PRIMARY KEY (id),
+    CONSTRAINT fk_webhook_template FOREIGN KEY (template_id) REFERENCES form_template (id),
+    CONSTRAINT ck_http_method CHECK (http_method IN ('POST', 'PUT'))
+);
+
+COMMENT ON TABLE webhook_rule IS 'Webhook推送规则表';
+COMMENT ON COLUMN webhook_rule.id IS '主键ID';
+COMMENT ON COLUMN webhook_rule.rule_name IS '规则名称';
+COMMENT ON COLUMN webhook_rule.template_id IS '关联模板ID';
+COMMENT ON COLUMN webhook_rule.webhook_url IS 'Webhook URL地址';
+COMMENT ON COLUMN webhook_rule.http_method IS 'HTTP方法: POST/PUT';
+COMMENT ON COLUMN webhook_rule.headers_json IS '自定义请求头(JSON格式)';
+COMMENT ON COLUMN webhook_rule.enabled IS '是否启用: 0-否, 1-是';
+COMMENT ON COLUMN webhook_rule.created_by IS '创建人';
+COMMENT ON COLUMN webhook_rule.created_at IS '创建时间';
+COMMENT ON COLUMN webhook_rule.updated_at IS '更新时间';
+
+CREATE INDEX idx_webhook_rule_template_id ON webhook_rule (template_id);
+CREATE INDEX idx_webhook_rule_enabled ON webhook_rule (enabled);

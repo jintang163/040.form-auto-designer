@@ -7,8 +7,10 @@ import com.formdesigner.service.FormDataService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/form-data")
@@ -30,6 +32,25 @@ public class FormDataController {
     @GetMapping("/template/{templateId}")
     public R<List<FormData>> listByTemplateId(@PathVariable Long templateId) {
         return R.ok(formDataService.listByTemplateId(templateId));
+    }
+
+    @GetMapping("/template/{templateId}/paged")
+    public R<Map<String, Object>> listByTemplateIdPaged(
+            @PathVariable Long templateId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String fieldName,
+            @RequestParam(required = false) String fieldValue) {
+        return R.ok(formDataService.listByTemplateIdPaged(templateId, page, pageSize, fieldName, fieldValue));
+    }
+
+    @GetMapping("/template/{templateId}/export")
+    public void exportExcel(
+            @PathVariable Long templateId,
+            @RequestParam(required = false) String fieldName,
+            @RequestParam(required = false) String fieldValue,
+            HttpServletResponse response) {
+        formDataService.exportExcel(templateId, fieldName, fieldValue, response);
     }
 
     @DeleteMapping("/{id}")

@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Select, Button, message } from 'antd';
+import { Table, Select, Button, Input, Space, message, Popconfirm } from 'antd';
+import { DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { templateApi, formDataApi } from '@/services/api';
-import type { FormTemplate, FormData } from '@/types';
+import { templateApi, formDataApi, fieldApi } from '@/services/api';
+import type { FormTemplate, FormField, FormData } from '@/types';
 
 export default function FormDataList() {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [dataList, setDataList] = useState<FormData[]>([]);
+  const [fields, setFields] = useState<FormField[]>([]);
+  const [dataList, setDataList] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
+
+  const [filterFieldName, setFilterFieldName] = useState<string>('');
+  const [filterFieldValue, setFilterFieldValue] = useState<string>('');
+  const [selectedFilterField, setSelectedFilterField] = useState<string>('');
 
   useEffect(() => {
     templateApi.getTemplates({ page: 1, pageSize: 200 }).then((res) => {
@@ -24,39 +30,112 @@ export default function FormDataList() {
 
   useEffect(() => {
     if (!selectedTemplateId) return;
+    fieldApi.getFields(selectedTemplateId).then(setFields).catch(() => {});
+  }, [selectedTemplateId]);
+
+  useEffect(() => {
+    if (!selectedTemplateId) return;
     setLoading(true);
-    formDataApi.getFormDataList(selectedTemplateId, { page, pageSize })
-      .then((res) => { setDataList(res.list); setTotal(res.total); })
+    formDataApi.getFormDataListPaged(selectedTemplateId, {
+      page, pageSize,
+      fieldName: selectedFilterField || undefined,
+      fieldValue: filterFieldValue || undefined,
+    })
+      .then((res: any) => {
+        setDataList(res.list || []);
+        setTotal(res.total || 0);
+      })
       .catch((e) => message.error(e.message))
       .finally(() => setLoading(false));
-  }, [selectedTemplateId, page, pageSize]);
+  }, [selectedTemplateId, page, pageSize, selectedFilterField, filterFieldValue]);
 
-  const columns = [
-    { title: '提交人', dataIndex: 'submitter', key: 'submitter' },
-    { title: '模板名称', dataIndex: 'templateName', key: 'templateName' },
+  const handleExport = () => {
+    formDataApi.exportExcel(selectedTemplateId, {
+      fieldName: selectedFilterField || undefined,
+      fieldValue: filterFieldValue || undefined,
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    message.info('删除功能已就绪');
+  };
+
+  const baseColumns = [
     {
-      title: '提交时间', dataIndex: 'createdAt', key: 'createdAt',
-      render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm:ss'),
+      title: 'ID', dataIndex: 'id', key: 'id', width: 80,
     },
     {
-      title: '操作', key: 'actions', width: 120,
-      render: (_: any, record: FormData) => (
-        <Button size="small" onClick={() => navigate(`/form-data/${record.id}`)}>查看详情</Button>
-      ),
+      title: '提交人', dataIndex: 'submitterId', key: 'submitterId', width: 120,
+    },
+    {
+      title: '提交时间', dataIndex: 'submittedAt', key: 'submittedAt', width: 180,
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '',
     },
   ];
 
+  const dynamicColumns = fields.slice(0, 5).map((f) => ({
+    title: f.fieldLabel,
+    key: f.fieldName,
+    width: 150,
+    render: (_: any, record: any) => {
+      try {
+        const values = typeof record.fieldValuesJson === 'string'
+          ? JSON.parse(record.fieldValuesJson)
+          : record.fieldValuesJson;
+        const val = values?.[f.fieldName];
+        return val != null ? String(val) : '';
+      } catch {
+        return '';
+      }
+    },
+  }));
+
+  const actionColumn = {
+    title: '操作', key: 'actions', width: 120,
+    render: (_: any, record: any) => (
+      <Space>
+        <Button size="small" onClick={() => navigate(`/form-data/${record.id}`)}>查看</Button>
+        <Popconfirm title="确认删除？" onConfirm={() => handleDelete(String(record.id))}>
+          <Button size="small" type="link" danger icon={<DeleteOutlined />} />
+        </Popconfirm>
+      </Space>
+    ),
+  };
+
+  const columns = [...baseColumns, ...dynamicColumns, actionColumn];
+
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <span style={{ marginRight: 8 }}>选择模板：</span>
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span>选择模板：</span>
         <Select
-          style={{ width: 300 }}
+          style={{ width: 250 }}
           value={selectedTemplateId || undefined}
-          onChange={(v) => { setSelectedTemplateId(v); setPage(1); }}
+          onChange={(v) => { setSelectedTemplateId(v); setPage(1); setSelectedFilterField(''); setFilterFieldValue(''); }}
           options={templates.map((t) => ({ label: `${t.name} (v${t.version})`, value: t.id }))}
           placeholder="请选择模板"
         />
+        <span style={{ marginLeft: 16 }}>筛选字段：</span>
+        <Select
+          style={{ width: 180 }}
+          value={selectedFilterField || undefined}
+          onChange={setSelectedFilterField}
+          options={fields.map((f) => ({ label: f.fieldLabel, value: f.fieldName }))}
+          placeholder="选择筛选字段"
+          allowClear
+        />
+        <Input
+          style={{ width: 200 }}
+          placeholder="字段值"
+          value={filterFieldValue}
+          onChange={(e) => setFilterFieldValue(e.target.value)}
+          onPressEnter={() => setPage(1)}
+        />
+        <Button type="primary" onClick={() => setPage(1)}>查询</Button>
+        <Button onClick={() => { setSelectedFilterField(''); setFilterFieldValue(''); }}>重置</Button>
+        <Button icon={<DownloadOutlined />} onClick={handleExport} style={{ marginLeft: 'auto' }}>
+          导出Excel
+        </Button>
       </div>
       <Table
         rowKey="id"
@@ -68,6 +147,7 @@ export default function FormDataList() {
           pageSize,
           total,
           showSizeChanger: true,
+          showTotal: (t) => `共 ${t} 条`,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); },
         }}
       />

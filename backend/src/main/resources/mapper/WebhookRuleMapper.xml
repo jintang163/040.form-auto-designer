@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.WebhookRuleMapper">
+
+    <insert id="insert" parameterType="com.formdesigner.entity.WebhookRule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO webhook_rule (rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at)
+        VALUES (#{ruleName}, #{templateId}, #{webhookUrl}, #{httpMethod}, #{headersJson}, #{enabled}, #{createdBy}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectById" resultType="com.formdesigner.entity.WebhookRule">
+        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE id = #{id}
+    </select>
+
+    <select id="selectByTemplateId" resultType="com.formdesigner.entity.WebhookRule">
+        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE template_id = #{templateId} ORDER BY created_at DESC
+    </select>
+
+    <select id="selectEnabledByTemplateId" resultType="com.formdesigner.entity.WebhookRule">
+        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE template_id = #{templateId} AND enabled = 1 ORDER BY created_at DESC
+    </select>
+
+    <select id="selectAll" resultType="com.formdesigner.entity.WebhookRule">
+        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule ORDER BY created_at DESC
+    </select>
+
+    <update id="updateById" parameterType="com.formdesigner.entity.WebhookRule">
+        UPDATE webhook_rule
+        SET rule_name = #{ruleName}, webhook_url = #{webhookUrl}, http_method = #{httpMethod},
+            headers_json = #{headersJson}, enabled = #{enabled}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM webhook_rule WHERE id = #{id}
+    </delete>
+
+</mapper>

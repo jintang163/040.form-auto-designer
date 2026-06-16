@@ -10,6 +10,10 @@ import type {
   FieldConfig,
   VersionCompareResult,
   RollbackResult,
+  StatisticsDashboard,
+  FieldDistribution,
+  NumericAggregation,
+  WebhookRule,
 } from '@/types';
 
 const request = axios.create({
@@ -26,7 +30,7 @@ request.interceptors.response.use(
 );
 
 function unwrap<T>(res: ApiResponse<T>): T {
-  if (res.code !== 0) throw new Error(res.message);
+  if (res.code !== 0 && res.code !== 200) throw new Error(res.message);
   return res.data;
 }
 
@@ -52,6 +56,21 @@ function mapTemplateToBackend(t: Partial<FormTemplate> & { changeLog?: string })
     schemaJson: t.schemaJson,
     status: t.status,
     changeLog: t.changeLog,
+  };
+}
+
+function mapWebhookFromBackend(w: any): WebhookRule {
+  return {
+    id: String(w.id),
+    ruleName: w.ruleName,
+    templateId: String(w.templateId),
+    webhookUrl: w.webhookUrl,
+    httpMethod: w.httpMethod,
+    headersJson: w.headersJson || '',
+    enabled: !!w.enabled,
+    createdBy: w.createdBy || '',
+    createdAt: w.createdAt,
+    updatedAt: w.updatedAt,
   };
 }
 
@@ -159,8 +178,67 @@ export const formDataApi = {
   getFormDataList: (templateId: string, params?: { page?: number; pageSize?: number }) =>
     request.get<any, ApiResponse<PaginatedResult<FormData>>>(`/form-data/${templateId}/list`, { params }).then(unwrap),
 
+  getFormDataListPaged: (templateId: string, params?: {
+    page?: number; pageSize?: number; fieldName?: string; fieldValue?: string;
+  }) =>
+    request.get<any, ApiResponse<any>>(`/form-data/template/${templateId}/paged`, { params }).then(unwrap),
+
   getFormDataDetail: (formDataId: string) =>
     request.get<any, ApiResponse<FormData>>(`/form-data/${formDataId}`).then(unwrap),
+
+  exportExcel: (templateId: string, params?: { fieldName?: string; fieldValue?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.fieldName) searchParams.set('fieldName', params.fieldName);
+    if (params?.fieldValue) searchParams.set('fieldValue', params.fieldValue);
+    const qs = searchParams.toString();
+    const url = `/api/form-data/template/${templateId}/export${qs ? '?' + qs : ''}`;
+    window.open(url, '_blank');
+  },
+};
+
+export const statisticsApi = {
+  getDashboard: (templateId?: number) =>
+    request.get<any, ApiResponse<StatisticsDashboard>>('/statistics/dashboard', {
+      params: templateId ? { templateId } : {},
+    }).then(unwrap),
+
+  getFieldDistribution: (templateId: number, fieldName: string) =>
+    request.get<any, ApiResponse<FieldDistribution>>('/statistics/field-distribution', {
+      params: { templateId, fieldName },
+    }).then(unwrap),
+
+  getNumericAggregation: (templateId: number, fieldName: string) =>
+    request.get<any, ApiResponse<NumericAggregation>>('/statistics/numeric-aggregation', {
+      params: { templateId, fieldName },
+    }).then(unwrap),
+};
+
+export const webhookApi = {
+  createRule: (data: Partial<WebhookRule>) =>
+    request.post<any, ApiResponse<any>>('/webhook-rules', {
+      ruleName: data.ruleName,
+      templateId: data.templateId,
+      webhookUrl: data.webhookUrl,
+      httpMethod: data.httpMethod || 'POST',
+      headersJson: data.headersJson,
+    }).then(unwrap).then(mapWebhookFromBackend),
+
+  getRules: (templateId?: string) =>
+    templateId
+      ? request.get<any, ApiResponse<any[]>>(`/webhook-rules/template/${templateId}`).then(unwrap).then((l) => l.map(mapWebhookFromBackend))
+      : request.get<any, ApiResponse<any[]>>('/webhook-rules').then(unwrap).then((l) => l.map(mapWebhookFromBackend)),
+
+  updateRule: (id: string, data: Partial<WebhookRule>) =>
+    request.put<any, ApiResponse<any>>(`/webhook-rules/${id}`, {
+      ruleName: data.ruleName,
+      webhookUrl: data.webhookUrl,
+      httpMethod: data.httpMethod,
+      headersJson: data.headersJson,
+      enabled: data.enabled,
+    }).then(unwrap).then(mapWebhookFromBackend),
+
+  deleteRule: (id: string) =>
+    request.delete<any, ApiResponse<void>>(`/webhook-rules/${id}`).then(unwrap),
 };
 
 function mapVersionFromBackend(v: any): FormVersion {

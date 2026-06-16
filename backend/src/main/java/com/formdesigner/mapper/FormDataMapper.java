@@ -14,5 +14,17 @@ public interface FormDataMapper {
 
     List<FormData> selectByTemplateId(@Param("templateId") Long templateId);
 
+    List<FormData> selectAll();
+
+    List<FormData> selectByTemplateIdPaged(@Param("templateId") Long templateId,
+                                           @Param("offset") int offset,
+                                           @Param("limit") int limit,
+                                           @Param("fieldName") String fieldName,
+                                           @Param("fieldValue") String fieldValue);
+
+    Long countByTemplateId(@Param("templateId") Long templateId,
+                           @Param("fieldName") String fieldName,
+                           @Param("fieldValue") String fieldValue);
+
     int deleteById(@Param("id") Long id);
 }

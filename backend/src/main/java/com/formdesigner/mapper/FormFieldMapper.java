@@ -21,4 +21,7 @@ public interface FormFieldMapper {
     int deleteById(@Param("id") Long id);
 
     int deleteByTemplateId(@Param("templateId") Long templateId);
+
+    FormField selectByTemplateIdAndFieldName(@Param("templateId") Long templateId,
+                                             @Param("fieldName") String fieldName);
 }

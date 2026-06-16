@@ -95,25 +95,6 @@ export interface VersionCompareResult {
   modifiedFields: FieldDiff[];
 }
 
-export interface RollbackResult {
-  template: FormTemplate;
-  fields: FormField[];
-  newVersion: number;
-}
-
-export type RecognitionStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-
-export interface RecognitionResult {
-  id: string;
-  fileId: string;
-  status: RecognitionStatus;
-  progress: number;
-  rawText?: string;
-  fields: FieldConfig[];
-  errorMessage?: string;
-  createdAt: string;
-}
-
 export interface FormData {
   id: string;
   templateId: string;
@@ -155,4 +136,58 @@ export interface ApiResponse<T = any> {
   code: number;
   message: string;
   data: T;
+}
+
+export interface DistributionItem {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface FieldDistribution {
+  fieldName: string;
+  fieldLabel: string;
+  items: DistributionItem[];
+}
+
+export interface NumericAggregation {
+  fieldName: string;
+  fieldLabel: string;
+  sum: number;
+  avg: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
+export interface TemplateRecordCount {
+  templateId: number;
+  templateName: string;
+  count: number;
+}
+
+export interface SubmissionTrend {
+  date: string;
+  count: number;
+}
+
+export interface StatisticsDashboard {
+  totalRecords: number;
+  templateCounts: TemplateRecordCount[];
+  fieldDistributions: FieldDistribution[];
+  numericAggregations: NumericAggregation[];
+  submissionTrend: SubmissionTrend[];
+}
+
+export interface WebhookRule {
+  id: string;
+  ruleName: string;
+  templateId: string;
+  webhookUrl: string;
+  httpMethod: string;
+  headersJson: string;
+  enabled: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -5,6 +5,8 @@ import TemplateCreate from './pages/TemplateCreate';
 import TemplatePreview from './pages/TemplatePreview';
 import FormDataList from './pages/FormDataList';
 import FormDataDetail from './pages/FormDataDetail';
+import DataStatistics from './pages/DataStatistics';
+import WebhookRules from './pages/WebhookRules';
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
         <Route path="templates/:id/preview" element={<TemplatePreview />} />
         <Route path="form-data" element={<FormDataList />} />
         <Route path="form-data/:templateId" element={<FormDataDetail />} />
+        <Route path="statistics" element={<DataStatistics />} />
+        <Route path="webhook-rules" element={<WebhookRules />} />
       </Route>
     </Routes>
   );

@@ -5,6 +5,8 @@ import {
   FileTextOutlined,
   DatabaseOutlined,
   HomeOutlined,
+  BarChartOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 
 const { Sider, Header, Content } = AntLayout;
@@ -20,6 +22,16 @@ const menuItems = [
     icon: <DatabaseOutlined />,
     label: '数据填报',
   },
+  {
+    key: '/statistics',
+    icon: <BarChartOutlined />,
+    label: '统计分析',
+  },
+  {
+    key: '/webhook-rules',
+    icon: <ApiOutlined />,
+    label: '推送规则',
+  },
 ];
 
 function buildBreadcrumb(pathname: string) {
@@ -30,6 +42,8 @@ function buildBreadcrumb(pathname: string) {
     edit: '编辑模板',
     preview: '预览模板',
     'form-data': '数据填报',
+    statistics: '统计分析',
+    'webhook-rules': '推送规则',
   };
   const items = [{ title: <><HomeOutlined /><span>首页</span></> }];
   let path = '';

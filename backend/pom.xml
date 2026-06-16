@@ -28,6 +28,7 @@
         <poi.version>5.2.3</poi.version>
         <hutool.version>5.8.22</hutool.version>
         <kingbase.version>8.6.0</kingbase.version>
+        <clickhouse.version>0.4.6</clickhouse.version>
     </properties>
 
     <dependencies>
@@ -101,6 +102,18 @@
             <artifactId>kingbase8</artifactId>
             <version>${kingbase.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.clickhouse</groupId>
+            <artifactId>clickhouse-jdbc</artifactId>
+            <version>${clickhouse.version}</version>
+            <classifier>http</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
         <dependency>
