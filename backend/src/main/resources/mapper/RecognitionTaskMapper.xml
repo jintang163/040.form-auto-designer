@@ -7,6 +7,8 @@
         <result column="task_id" property="taskId"/>
         <result column="file_id" property="fileId"/>
         <result column="file_type" property="fileType"/>
+        <result column="ocr_type" property="ocrType"/>
+        <result column="ocr_raw_json" property="ocrRawJson"/>
         <result column="status" property="status"/>
         <result column="progress" property="progress"/>
         <result column="result" property="result"/>
@@ -16,9 +18,13 @@
         <result column="completed_at" property="completedAt"/>
     </resultMap>
 
+    <sql id="baseColumns">
+        id, task_id, file_id, file_type, ocr_type, ocr_raw_json, status, progress, result, error_message, tenant_id, created_at, completed_at
+    </sql>
+
     <insert id="insert" parameterType="com.formdesigner.entity.RecognitionTask" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO recognition_task (task_id, file_id, file_type, status, progress, result, error_message, tenant_id, created_at, completed_at)
-        VALUES (#{taskId}, #{fileId}, #{fileType}, #{status}, #{progress}, #{result}, #{errorMessage}, #{tenantId}, #{createdAt}, #{completedAt})
+        INSERT INTO recognition_task (task_id, file_id, file_type, ocr_type, ocr_raw_json, status, progress, result, error_message, tenant_id, created_at, completed_at)
+        VALUES (#{taskId}, #{fileId}, #{fileType}, #{ocrType}, #{ocrRawJson}, #{status}, #{progress}, #{result}, #{errorMessage}, #{tenantId}, #{createdAt}, #{completedAt})
     </insert>
 
     <update id="updateById" parameterType="com.formdesigner.entity.RecognitionTask">
@@ -27,6 +33,8 @@
             <if test="taskId != null">task_id = #{taskId},</if>
             <if test="fileId != null">file_id = #{fileId},</if>
             <if test="fileType != null">file_type = #{fileType},</if>
+            <if test="ocrType != null">ocr_type = #{ocrType},</if>
+            <if test="ocrRawJson != null">ocr_raw_json = #{ocrRawJson},</if>
             <if test="status != null">status = #{status},</if>
             <if test="progress != null">progress = #{progress},</if>
             <if test="result != null">result = #{result},</if>
@@ -38,22 +46,22 @@
     </update>
 
     <select id="selectById" resultMap="RecognitionTaskResultMap">
-        SELECT id, task_id, file_id, file_type, status, progress, result, error_message, tenant_id, created_at, completed_at
+        SELECT <include refid="baseColumns"/>
         FROM recognition_task WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectByTaskId" resultMap="RecognitionTaskResultMap">
-        SELECT id, task_id, file_id, file_type, status, progress, result, error_message, tenant_id, created_at, completed_at
+        SELECT <include refid="baseColumns"/>
         FROM recognition_task WHERE task_id = #{taskId} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectByStatus" resultMap="RecognitionTaskResultMap">
-        SELECT id, task_id, file_id, file_type, status, progress, result, error_message, tenant_id, created_at, completed_at
+        SELECT <include refid="baseColumns"/>
         FROM recognition_task WHERE status = #{status} AND tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 
     <select id="selectAll" resultMap="RecognitionTaskResultMap">
-        SELECT id, task_id, file_id, file_type, status, progress, result, error_message, tenant_id, created_at, completed_at
+        SELECT <include refid="baseColumns"/>
         FROM recognition_task WHERE tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 

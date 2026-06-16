@@ -10,6 +10,8 @@ public class RecognitionTask {
     private String taskId;
     private Long fileId;
     private String fileType;
+    private String ocrType;
+    private String ocrRawJson;
     private String status;
     private Integer progress;
     private String result;

@@ -272,3 +272,24 @@ export interface LoginResponse {
   avatarUrl?: string;
   tenants: SysTenantUser[];
 }
+
+export type OcrDocType = 'ID_CARD_FRONT' | 'ID_CARD_BACK' | 'BUSINESS_LICENSE' | 'AUTO';
+
+export interface OcrFieldItem {
+  fieldName: string;
+  fieldLabel: string;
+  fieldType: string;
+  inputType: InputType;
+  defaultValue?: string;
+  required?: boolean;
+  sortOrder?: number;
+}
+
+export interface OcrResult {
+  success: boolean;
+  message?: string;
+  docType?: OcrDocType;
+  fields?: Record<string, string>;
+  rawJson?: string;
+  fieldItems?: OcrFieldItem[];
+}

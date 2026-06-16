@@ -20,6 +20,8 @@ import type {
   SysTenantQuota,
   SysTenantUser,
   LoginResponse,
+  OcrResult,
+  OcrDocType,
 } from '@/types';
 
 const request = axios.create({
@@ -187,6 +189,17 @@ export const recognitionApi = {
 
   getRecognitionResult: (recognitionId: string) =>
     request.get<any, ApiResponse<RecognitionResult>>(`/recognition/${recognitionId}/result`).then(unwrap),
+};
+
+export const ocrApi = {
+  recognize: (file: File, docType: OcrDocType = 'AUTO') => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('docType', docType);
+    return request.post<any, ApiResponse<OcrResult>>('/ocr/recognize', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(unwrap);
+  },
 };
 
 export const formDataApi = {

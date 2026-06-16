@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Steps, Button, Upload, Card, Space, message, Spin, Row, Col,
+  Steps, Button, Upload, Card, Space, message, Spin, Row, Col, Tabs,
   List, Drawer, Form, Input, Modal, Empty, Tag,
 } from 'antd';
 import {
@@ -23,7 +23,8 @@ import FieldEditor from '@/components/FieldEditor';
 import SchemaPreview from '@/components/SchemaPreview';
 import RecognitionProgress from '@/components/RecognitionProgress';
 import VersionManagerPanel from '@/components/VersionManagerPanel';
-import type { FieldConfig, FormField, RecognitionResult, FormSchema, RollbackResult } from '@/types';
+import OcrImageUploader from '@/components/OcrImageUploader';
+import type { FieldConfig, FormField, RecognitionResult, FormSchema, RollbackResult, OcrFieldItem } from '@/types';
 
 function SortableFieldItem({ field, selected, onClick, onDelete }: {
   field: FormField; selected: boolean; onClick: () => void; onDelete: () => void;
@@ -163,6 +164,28 @@ export default function TemplateCreate() {
     }
   };
 
+  const handleOcrFieldsRecognized = (items: OcrFieldItem[]) => {
+    if (!items || items.length === 0) return;
+    const base = fields.length;
+    const newFields: FormField[] = items.map((fc, i) => ({
+      id: generateFieldId(),
+      templateId: '',
+      fieldName: fc.fieldName,
+      fieldLabel: fc.fieldLabel,
+      fieldType: (fc.fieldType || 'string') as FormField['fieldType'],
+      inputType: (fc.inputType || 'text') as FormField['inputType'],
+      required: !!fc.required,
+      defaultValue: fc.defaultValue,
+      validationRules: [],
+      sortOrder: base + (fc.sortOrder ?? i),
+      layoutConfig: { row: Math.floor((base + i) / 2) + 1, col: ((base + i) % 2) + 1, rowSpan: 1, colSpan: 1 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+    for (const f of newFields) addFieldLocal(f);
+    message.success(`OCR 已生成 ${newFields.length} 个字段`);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -279,30 +302,47 @@ export default function TemplateCreate() {
       <Steps current={currentStep} items={steps.map((s) => ({ title: s }))} style={{ marginBottom: 24 }} />
 
       {currentStep === 0 && (
-        <Row gutter={24}>
-          <Col span={12}>
-            <Card title="上传文件" size="small">
-              <Upload
-                accept=".docx,.jpg,.jpeg,.png"
-                showUploadList={false}
-                beforeUpload={(file) => { handleUpload(file); return false; }}
-              >
-                <Button icon={<UploadOutlined />} loading={recognitionLoading}>选择文件上传</Button>
-              </Upload>
-              <p style={{ marginTop: 8, color: '#999' }}>支持 docx、jpg、png 格式</p>
-              {recognition && <RecognitionProgress result={recognition} />}
-            </Card>
-          </Col>
-          <Col span={12}>
-            <Card title="原文预览" size="small">
-              {rawText ? (
-                <pre style={{ maxHeight: 400, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{rawText}</pre>
-              ) : (
-                <Empty description="上传文件后自动识别" />
-              )}
-            </Card>
-          </Col>
-        </Row>
+        <Tabs
+          items={[
+            {
+              key: 'document',
+              label: '文档/图片识别（表单模板）',
+              children: (
+                <Row gutter={24}>
+                  <Col span={12}>
+                    <Card title="上传文件" size="small">
+                      <Upload
+                        accept=".docx,.jpg,.jpeg,.png"
+                        showUploadList={false}
+                        beforeUpload={(file) => { handleUpload(file); return false; }}
+                      >
+                        <Button icon={<UploadOutlined />} loading={recognitionLoading}>选择文件上传</Button>
+                      </Upload>
+                      <p style={{ marginTop: 8, color: '#999' }}>支持 docx、jpg、png 格式，自动生成表单字段</p>
+                      {recognition && <RecognitionProgress result={recognition} />}
+                    </Card>
+                  </Col>
+                  <Col span={12}>
+                    <Card title="原文预览" size="small">
+                      {rawText ? (
+                        <pre style={{ maxHeight: 400, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{rawText}</pre>
+                      ) : (
+                        <Empty description="上传文件后自动识别" />
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
+              ),
+            },
+            {
+              key: 'ocr',
+              label: '证件 OCR 识别（身份证/营业执照）',
+              children: (
+                <OcrImageUploader onFieldsRecognized={handleOcrFieldsRecognized} />
+              ),
+            },
+          ]}
+        />
       )}
 
       {currentStep === 1 && (

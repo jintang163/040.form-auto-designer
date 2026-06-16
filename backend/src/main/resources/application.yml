@@ -64,6 +64,17 @@ voice:
     secret-key:
     app-id:
 
+ocr:
+  mock: true
+  provider: mock
+  aliyun:
+    access-key-id:
+    access-key-secret:
+    endpoint: ocr.cn-shanghai.aliyuncs.com
+  baidu:
+    api-key:
+    secret-key:
+
 clickhouse:
   enabled: true
   url: jdbc:clickhouse://localhost:8123/form_analytics
