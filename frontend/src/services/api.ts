@@ -16,11 +16,30 @@ import type {
   WebhookRule,
   FormRecommendation,
   FieldRecommendation,
+  SysTenant,
+  SysTenantQuota,
+  SysTenantUser,
 } from '@/types';
 
 const request = axios.create({
   baseURL: '/api',
   timeout: 30000,
+});
+
+request.interceptors.request.use((config) => {
+  const tenantId = localStorage.getItem('currentTenantId');
+  if (tenantId) {
+    config.headers['X-Tenant-Id'] = tenantId;
+  }
+  const userRole = localStorage.getItem('currentUserRole');
+  if (userRole) {
+    config.headers['X-User-Role'] = userRole;
+  }
+  const userId = localStorage.getItem('currentUserId');
+  if (userId) {
+    config.headers['X-User-Id'] = userId;
+  }
+  return config;
 });
 
 request.interceptors.response.use(
@@ -347,4 +366,82 @@ export const versionApi = {
         fields: (r.fields || []).map(mapFieldFromBackend),
         newVersion: r.newVersion,
       })),
+};
+
+function mapTenantFromBackend(t: any): SysTenant {
+  return {
+    id: t.id,
+    tenantCode: t.tenantCode,
+    tenantName: t.tenantName,
+    description: t.description,
+    tablePrefix: t.tablePrefix,
+    adminUser: t.adminUser,
+    adminEmail: t.adminEmail,
+    adminPhone: t.adminPhone,
+    status: t.status,
+    isSystem: t.isSystem,
+    expiredAt: t.expiredAt,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  };
+}
+
+export const tenantApi = {
+  listTenants: () =>
+    request.get<any, ApiResponse<any[]>>('/tenants').then(unwrap).then((l) => (l || []).map(mapTenantFromBackend)),
+
+  listActiveTenants: () =>
+    request.get<any, ApiResponse<any[]>>('/tenants/active').then(unwrap).then((l) => (l || []).map(mapTenantFromBackend)),
+
+  getTenant: (id: number) =>
+    request.get<any, ApiResponse<any>>(`/tenants/${id}`).then(unwrap).then(mapTenantFromBackend),
+
+  createTenant: (data: Partial<SysTenant> & { maxTemplates?: number; maxFormSubmissions?: number; maxStorageMb?: number }) =>
+    request.post<any, ApiResponse<any>>('/tenants', {
+      tenantCode: data.tenantCode,
+      tenantName: data.tenantName,
+      description: data.description,
+      tablePrefix: data.tablePrefix,
+      adminUser: data.adminUser,
+      adminEmail: data.adminEmail,
+      adminPhone: data.adminPhone,
+      maxTemplates: data.maxTemplates,
+      maxFormSubmissions: data.maxFormSubmissions,
+      maxStorageMb: data.maxStorageMb,
+    }).then(unwrap).then(mapTenantFromBackend),
+
+  updateTenant: (id: number, data: Partial<SysTenant>) =>
+    request.put<any, ApiResponse<any>>(`/tenants/${id}`, {
+      tenantName: data.tenantName,
+      description: data.description,
+      adminEmail: data.adminEmail,
+      adminPhone: data.adminPhone,
+      status: data.status,
+    }).then(unwrap).then(mapTenantFromBackend),
+
+  deleteTenant: (id: number) =>
+    request.delete<any, ApiResponse<void>>(`/tenants/${id}`).then(unwrap),
+
+  getQuota: (tenantId: number) =>
+    request.get<any, ApiResponse<SysTenantQuota>>(`/tenants/${tenantId}/quota`).then(unwrap),
+
+  updateQuota: (tenantId: number, data: Partial<SysTenantQuota>) =>
+    request.put<any, ApiResponse<SysTenantQuota>>(`/tenants/${tenantId}/quota`, data).then(unwrap),
+
+  getTenantUsers: (tenantId: number) =>
+    request.get<any, ApiResponse<SysTenantUser[]>>(`/tenants/${tenantId}/users`).then(unwrap),
+
+  addUserToTenant: (tenantId: number, userId: string, userName: string, role: string = 'USER') =>
+    request.post<any, ApiResponse<SysTenantUser>>(`/tenants/${tenantId}/users`, null, {
+      params: { userId, userName, role },
+    }).then(unwrap),
+
+  removeUserFromTenant: (tenantId: number, userId: string) =>
+    request.delete<any, ApiResponse<void>>(`/tenants/${tenantId}/users/${userId}`).then(unwrap),
+
+  getCurrentUserTenants: () =>
+    request.get<any, ApiResponse<SysTenantUser[]>>('/tenants/current/user-tenants').then(unwrap),
+
+  checkQuota: (tenantId: number, type: string) =>
+    request.get<any, ApiResponse<boolean>>(`/tenants/${tenantId}/check-quota`, { params: { type } }).then(unwrap),
 };

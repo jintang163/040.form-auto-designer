@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public class FormVersion {
 
     private Long id;
+    private Long tenantId;
     private Long templateId;
     private Integer version;
     private String schemaJson;

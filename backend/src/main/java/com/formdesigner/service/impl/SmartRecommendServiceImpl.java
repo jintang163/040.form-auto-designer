@@ -35,13 +35,15 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
     private final FormFieldMapper formFieldMapper;
     private final ObjectMapper objectMapper;
 
+    private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
+
     @Override
     public FormRecommendationVO getRecommendations(Long templateId, String submitterId) {
         FormRecommendationVO vo = new FormRecommendationVO();
         vo.setTemplateId(templateId);
         vo.setSubmitterId(submitterId);
 
-        List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+        List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
         List<FieldRecommendationVO> fieldRecs = new ArrayList<>();
 
         for (FormField field : fields) {
@@ -68,7 +70,7 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
 
         if (submitterId != null && !submitterId.isEmpty()) {
             List<FieldValueStats> userStats = statsMapper.selectTopNBySubmitter(
-                    templateId, fieldName, submitterId, 10);
+                    templateId, fieldName, submitterId, 10, currentTenantId());
             for (FieldValueStats s : userStats) {
                 double score = s.getFrequency() * USER_WEIGHT;
                 scoreMap.merge(s.getFieldValue(), score, Double::sum);
@@ -159,6 +161,7 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
                 globalStat.setSubmitterId(GLOBAL_USER);
                 globalStat.setLastUsedAt(now);
                 globalStat.setUpdatedAt(now);
+                globalStat.setTenantId(currentTenantId());
                 statsMapper.upsertIncrement(globalStat);
             }
 
@@ -171,7 +174,7 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
     @Override
     @Transactional
     public void rebuildStats(Long templateId) {
-        statsMapper.deleteByTemplateId(templateId);
+        statsMapper.deleteByTemplateId(templateId, currentTenantId());
 
         List<FormData> allData = formDataMapper.selectByTemplateId(templateId);
         for (FormData fd : allData) {

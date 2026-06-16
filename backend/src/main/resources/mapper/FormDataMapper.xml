@@ -3,29 +3,29 @@
 <mapper namespace="com.formdesigner.mapper.FormDataMapper">
 
     <insert id="insert" parameterType="com.formdesigner.entity.FormData" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO form_data (template_id, version, field_values_json, submitter_id, submitted_at)
-        VALUES (#{templateId}, #{version}, #{fieldValuesJson}, #{submitterId}, #{submittedAt})
+        INSERT INTO form_data (template_id, version, field_values_json, submitter_id, tenant_id, submitted_at)
+        VALUES (#{templateId}, #{version}, #{fieldValuesJson}, #{submitterId}, #{tenantId}, #{submittedAt})
     </insert>
 
     <select id="selectById" resultType="com.formdesigner.entity.FormData">
-        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
-        FROM form_data WHERE id = #{id}
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
+        FROM form_data WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormData">
-        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
-        FROM form_data WHERE template_id = #{templateId} ORDER BY submitted_at DESC
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
+        FROM form_data WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY submitted_at DESC
     </select>
 
     <select id="selectAll" resultType="com.formdesigner.entity.FormData">
-        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
-        FROM form_data ORDER BY submitted_at DESC
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
+        FROM form_data WHERE tenant_id = #{tenantId} ORDER BY submitted_at DESC
     </select>
 
     <select id="selectByTemplateIdPaged" resultType="com.formdesigner.entity.FormData">
-        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
         FROM form_data
-        WHERE template_id = #{templateId}
+        WHERE template_id = #{templateId} AND tenant_id = #{tenantId}
         <if test="fieldName != null and fieldName != '' and fieldValue != null and fieldValue != ''">
             AND field_values_json LIKE CONCAT('%', #{fieldName}, '%', #{fieldValue}, '%')
         </if>
@@ -35,16 +35,16 @@
 
     <select id="countByTemplateId" resultType="java.lang.Long">
         SELECT COUNT(*) FROM form_data
-        WHERE template_id = #{templateId}
+        WHERE template_id = #{templateId} AND tenant_id = #{tenantId}
         <if test="fieldName != null and fieldName != '' and fieldValue != null and fieldValue != ''">
             AND field_values_json LIKE CONCAT('%', #{fieldName}, '%', #{fieldValue}, '%')
         </if>
     </select>
 
     <select id="selectByTemplateIdFiltered" resultType="com.formdesigner.entity.FormData">
-        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
         FROM form_data
-        WHERE template_id = #{templateId}
+        WHERE template_id = #{templateId} AND tenant_id = #{tenantId}
         <if test="fieldName != null and fieldName != '' and fieldValue != null and fieldValue != ''">
             AND field_values_json LIKE CONCAT('%', #{fieldName}, '%', #{fieldValue}, '%')
         </if>
@@ -52,9 +52,9 @@
     </select>
 
     <select id="selectBySubmitterId" resultType="com.formdesigner.entity.FormData">
-        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
         FROM form_data
-        WHERE template_id = #{templateId} AND submitter_id = #{submitterId}
+        WHERE template_id = #{templateId} AND submitter_id = #{submitterId} AND tenant_id = #{tenantId}
         ORDER BY submitted_at DESC
     </select>
 

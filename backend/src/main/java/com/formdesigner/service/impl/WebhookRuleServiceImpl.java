@@ -4,6 +4,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import com.formdesigner.entity.WebhookRule;
 import com.formdesigner.mapper.WebhookRuleMapper;
+import com.formdesigner.common.TenantContext;
 import com.formdesigner.service.WebhookRuleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,35 +20,38 @@ public class WebhookRuleServiceImpl implements WebhookRuleService {
 
     private final WebhookRuleMapper webhookRuleMapper;
 
+    private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
+
     @Override
     public WebhookRule create(WebhookRule rule) {
         rule.setEnabled(true);
         rule.setCreatedAt(LocalDateTime.now());
         rule.setUpdatedAt(LocalDateTime.now());
+        rule.setTenantId(currentTenantId());
         webhookRuleMapper.insert(rule);
         return rule;
     }
 
     @Override
     public WebhookRule getById(Long id) {
-        return webhookRuleMapper.selectById(id);
+        return webhookRuleMapper.selectById(id, currentTenantId());
     }
 
     @Override
     public List<WebhookRule> listByTemplateId(Long templateId) {
-        return webhookRuleMapper.selectByTemplateId(templateId);
+        return webhookRuleMapper.selectByTemplateId(templateId, currentTenantId());
     }
 
     @Override
     public List<WebhookRule> listAll() {
-        return webhookRuleMapper.selectAll();
+        return webhookRuleMapper.selectAll(currentTenantId());
     }
 
     @Override
     public WebhookRule update(WebhookRule rule) {
         rule.setUpdatedAt(LocalDateTime.now());
         webhookRuleMapper.updateById(rule);
-        return webhookRuleMapper.selectById(rule.getId());
+        return webhookRuleMapper.selectById(rule.getId(), currentTenantId());
     }
 
     @Override
@@ -57,7 +61,7 @@ public class WebhookRuleServiceImpl implements WebhookRuleService {
 
     @Override
     public void triggerWebhooks(Long templateId, String formDataJson) {
-        List<WebhookRule> rules = webhookRuleMapper.selectEnabledByTemplateId(templateId);
+        List<WebhookRule> rules = webhookRuleMapper.selectEnabledByTemplateId(templateId, currentTenantId());
         for (WebhookRule rule : rules) {
             try {
                 HttpRequest request;

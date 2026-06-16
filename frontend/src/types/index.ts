@@ -213,3 +213,47 @@ export interface FormRecommendation {
   submitterId: string;
   fields: FieldRecommendation[];
 }
+
+export type TenantStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+export type TenantUserRole = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'USER';
+
+export interface SysTenant {
+  id: number;
+  tenantCode: string;
+  tenantName: string;
+  description?: string;
+  tablePrefix?: string;
+  adminUser?: string;
+  adminEmail?: string;
+  adminPhone?: string;
+  status: TenantStatus;
+  isSystem: number;
+  expiredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SysTenantQuota {
+  id: number;
+  tenantId: number;
+  maxTemplates: number;
+  maxFieldsPerTemplate: number;
+  maxFormSubmissions: number;
+  maxStorageMb: number;
+  maxApiCallsDaily: number;
+  maxWebhookRules: number;
+  currentTemplates: number;
+  currentFormSubmissions: number;
+  currentStorageMb: number;
+  currentApiCallsDaily: number;
+  currentApiCallsDate?: string;
+}
+
+export interface SysTenantUser {
+  id: number;
+  tenantId: number;
+  userId: string;
+  userName?: string;
+  role: TenantUserRole;
+  joinedAt: string;
+}

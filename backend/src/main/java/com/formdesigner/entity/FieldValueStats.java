@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 @Data
 public class FieldValueStats {
     private Long id;
+    private Long tenantId;
     private Long templateId;
     private String fieldName;
     private String fieldValue;

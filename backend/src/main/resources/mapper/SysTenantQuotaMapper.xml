@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.SysTenantQuotaMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.SysTenantQuota">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="max_templates" property="maxTemplates"/>
+        <result column="max_fields_per_template" property="maxFieldsPerTemplate"/>
+        <result column="max_form_submissions" property="maxFormSubmissions"/>
+        <result column="max_storage_mb" property="maxStorageMb"/>
+        <result column="max_api_calls_daily" property="maxApiCallsDaily"/>
+        <result column="max_webhook_rules" property="maxWebhookRules"/>
+        <result column="current_templates" property="currentTemplates"/>
+        <result column="current_form_submissions" property="currentFormSubmissions"/>
+        <result column="current_storage_mb" property="currentStorageMb"/>
+        <result column="current_api_calls_daily" property="currentApiCallsDaily"/>
+        <result column="current_api_calls_date" property="currentApiCallsDate"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, tenant_id, max_templates, max_fields_per_template, max_form_submissions,
+        max_storage_mb, max_api_calls_daily, max_webhook_rules, current_templates,
+        current_form_submissions, current_storage_mb, current_api_calls_daily,
+        current_api_calls_date, created_at, updated_at
+    </sql>
+
+    <select id="selectByTenantId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_tenant_quota
+        WHERE tenant_id = #{tenantId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_tenant_quota (tenant_id, max_templates, max_fields_per_template,
+                                       max_form_submissions, max_storage_mb, max_api_calls_daily,
+                                       max_webhook_rules, current_templates, current_form_submissions,
+                                       current_storage_mb, current_api_calls_daily, current_api_calls_date,
+                                       created_at, updated_at)
+        VALUES (#{tenantId}, #{maxTemplates}, #{maxFieldsPerTemplate},
+                #{maxFormSubmissions}, #{maxStorageMb}, #{maxApiCallsDaily},
+                #{maxWebhookRules}, 0, 0, 0, 0, NULL,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateByTenantId">
+        UPDATE sys_tenant_quota
+        <set>
+            <if test="maxTemplates != null">max_templates = #{maxTemplates},</if>
+            <if test="maxFieldsPerTemplate != null">max_fields_per_template = #{maxFieldsPerTemplate},</if>
+            <if test="maxFormSubmissions != null">max_form_submissions = #{maxFormSubmissions},</if>
+            <if test="maxStorageMb != null">max_storage_mb = #{maxStorageMb},</if>
+            <if test="maxApiCallsDaily != null">max_api_calls_daily = #{maxApiCallsDaily},</if>
+            <if test="maxWebhookRules != null">max_webhook_rules = #{maxWebhookRules},</if>
+            updated_at = CURRENT_TIMESTAMP,
+        </set>
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="incrementTemplateCount">
+        UPDATE sys_tenant_quota
+        SET current_templates = current_templates + #{delta},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="incrementFormSubmissionCount">
+        UPDATE sys_tenant_quota
+        SET current_form_submissions = current_form_submissions + #{delta},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="incrementApiCallCount">
+        UPDATE sys_tenant_quota
+        SET current_api_calls_daily = CASE
+                WHEN current_api_calls_date = #{today} THEN current_api_calls_daily + 1
+                ELSE 1
+            END,
+            current_api_calls_date = #{today},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+</mapper>

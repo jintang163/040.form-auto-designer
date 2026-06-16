@@ -3,33 +3,33 @@
 <mapper namespace="com.formdesigner.mapper.WebhookRuleMapper">
 
     <insert id="insert" parameterType="com.formdesigner.entity.WebhookRule" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO webhook_rule (rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at)
-        VALUES (#{ruleName}, #{templateId}, #{webhookUrl}, #{httpMethod}, #{headersJson}, #{enabled}, #{createdBy}, #{createdAt}, #{updatedAt})
+        INSERT INTO webhook_rule (tenant_id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at)
+        VALUES (#{tenantId}, #{ruleName}, #{templateId}, #{webhookUrl}, #{httpMethod}, #{headersJson}, #{enabled}, #{createdBy}, #{createdAt}, #{updatedAt})
     </insert>
 
     <select id="selectById" resultType="com.formdesigner.entity.WebhookRule">
-        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
-        FROM webhook_rule WHERE id = #{id}
+        SELECT id, tenant_id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectByTemplateId" resultType="com.formdesigner.entity.WebhookRule">
-        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
-        FROM webhook_rule WHERE template_id = #{templateId} ORDER BY created_at DESC
+        SELECT id, tenant_id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 
     <select id="selectEnabledByTemplateId" resultType="com.formdesigner.entity.WebhookRule">
-        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
-        FROM webhook_rule WHERE template_id = #{templateId} AND enabled = 1 ORDER BY created_at DESC
+        SELECT id, tenant_id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE template_id = #{templateId} AND enabled = 1 AND tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 
     <select id="selectAll" resultType="com.formdesigner.entity.WebhookRule">
-        SELECT id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
-        FROM webhook_rule ORDER BY created_at DESC
+        SELECT id, tenant_id, rule_name, template_id, webhook_url, http_method, headers_json, enabled, created_by, created_at, updated_at
+        FROM webhook_rule WHERE tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 
     <update id="updateById" parameterType="com.formdesigner.entity.WebhookRule">
         UPDATE webhook_rule
-        SET rule_name = #{ruleName}, webhook_url = #{webhookUrl}, http_method = #{httpMethod},
+        SET tenant_id = #{tenantId}, rule_name = #{ruleName}, webhook_url = #{webhookUrl}, http_method = #{httpMethod},
             headers_json = #{headersJson}, enabled = #{enabled}, updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>

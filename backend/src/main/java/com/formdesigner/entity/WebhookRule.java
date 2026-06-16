@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 @Data
 public class WebhookRule {
     private Long id;
+    private Long tenantId;
     private String ruleName;
     private Long templateId;
     private String webhookUrl;

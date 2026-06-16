@@ -3,6 +3,7 @@ package com.formdesigner.service.impl;
 import com.formdesigner.dto.FieldConfigDTO;
 import com.formdesigner.entity.FormField;
 import com.formdesigner.mapper.FormFieldMapper;
+import com.formdesigner.common.TenantContext;
 import com.formdesigner.service.FormFieldService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,8 @@ import java.util.List;
 public class FormFieldServiceImpl implements FormFieldService {
 
     private final FormFieldMapper formFieldMapper;
+
+    private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
 
     @Override
     public FormField createField(FieldConfigDTO dto) {
@@ -28,6 +31,7 @@ public class FormFieldServiceImpl implements FormFieldService {
         field.setValidationRules(dto.getValidationRules());
         field.setSortOrder(dto.getSortOrder() != null ? dto.getSortOrder() : 0);
         field.setLayoutConfig(dto.getLayoutConfig());
+        field.setTenantId(currentTenantId());
         formFieldMapper.insert(field);
         return field;
     }
@@ -76,7 +80,7 @@ public class FormFieldServiceImpl implements FormFieldService {
 
     @Override
     public List<FormField> listByTemplateId(Long templateId) {
-        return formFieldMapper.selectByTemplateId(templateId);
+        return formFieldMapper.selectByTemplateId(templateId, currentTenantId());
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.formdesigner.entity.FormData;
 import com.formdesigner.entity.FormField;
 import com.formdesigner.entity.FormTemplate;
+import com.formdesigner.common.TenantContext;
 import com.formdesigner.mapper.FormDataMapper;
 import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.mapper.FormTemplateMapper;
@@ -46,6 +47,8 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
         this.objectMapper = objectMapper;
     }
 
+    private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
+
     private boolean isClickHouseAvailable() {
         if (clickhouseJdbcTemplate == null) {
             return false;
@@ -73,7 +76,7 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
 
     @Override
     public FieldDistributionVO getFieldDistribution(Long templateId, String fieldName) {
-        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName);
+        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName, currentTenantId());
         if (field == null) return null;
 
         if (isClickHouseAvailable()) {
@@ -89,7 +92,7 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
 
     @Override
     public NumericAggregationVO getNumericAggregation(Long templateId, String fieldName) {
-        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName);
+        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName, currentTenantId());
         if (field == null) return null;
 
         if (isClickHouseAvailable()) {
@@ -157,7 +160,7 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
         dashboard.setSubmissionTrend(trend);
 
         if (templateId != null) {
-            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
             List<FieldDistributionVO> distributions = new ArrayList<>();
             List<NumericAggregationVO> aggregations = new ArrayList<>();
 
@@ -284,7 +287,7 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
         dashboard.setSubmissionTrend(trend);
 
         if (templateId != null) {
-            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
             List<FieldDistributionVO> distributions = new ArrayList<>();
             List<NumericAggregationVO> aggregations = new ArrayList<>();
 

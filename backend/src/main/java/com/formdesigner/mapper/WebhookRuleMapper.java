@@ -9,13 +9,13 @@ import java.util.List;
 public interface WebhookRuleMapper {
     int insert(WebhookRule webhookRule);
 
-    WebhookRule selectById(@Param("id") Long id);
+    WebhookRule selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
-    List<WebhookRule> selectByTemplateId(@Param("templateId") Long templateId);
+    List<WebhookRule> selectByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
-    List<WebhookRule> selectEnabledByTemplateId(@Param("templateId") Long templateId);
+    List<WebhookRule> selectEnabledByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
-    List<WebhookRule> selectAll();
+    List<WebhookRule> selectAll(@Param("tenantId") Long tenantId);
 
     int updateById(WebhookRule webhookRule);
 

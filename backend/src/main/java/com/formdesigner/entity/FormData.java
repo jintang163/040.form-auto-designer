@@ -11,5 +11,6 @@ public class FormData {
     private Integer version;
     private String fieldValuesJson;
     private String submitterId;
+    private Long tenantId;
     private LocalDateTime submittedAt;
 }

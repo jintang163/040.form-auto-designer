@@ -7,6 +7,7 @@ import FormDataList from './pages/FormDataList';
 import FormDataDetail from './pages/FormDataDetail';
 import DataStatistics from './pages/DataStatistics';
 import WebhookRules from './pages/WebhookRules';
+import TenantManagement from './pages/TenantManagement';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="form-data/:templateId" element={<FormDataDetail />} />
         <Route path="statistics" element={<DataStatistics />} />
         <Route path="webhook-rules" element={<WebhookRules />} />
+        <Route path="tenants" element={<TenantManagement />} />
       </Route>
     </Routes>
   );

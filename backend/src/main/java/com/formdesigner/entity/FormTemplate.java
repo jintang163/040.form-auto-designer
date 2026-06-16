@@ -13,6 +13,7 @@ public class FormTemplate {
     private String schemaJson;
     private Integer version;
     private String status;
+    private Long tenantId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

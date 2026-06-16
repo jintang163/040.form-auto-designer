@@ -8,6 +8,7 @@ import com.formdesigner.entity.FormVersion;
 import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.mapper.FormVersionMapper;
+import com.formdesigner.common.TenantContext;
 import com.formdesigner.service.FormVersionService;
 import com.formdesigner.util.SchemaDiffUtil;
 import com.formdesigner.vo.FieldDiffVO;
@@ -31,9 +32,11 @@ public class FormVersionServiceImpl implements FormVersionService {
     private final FormFieldMapper formFieldMapper;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
+
     private String serializeFields(Long templateId) {
         try {
-            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
             return objectMapper.writeValueAsString(fields);
         } catch (Exception e) {
             throw new RuntimeException("序列化字段数据失败: " + e.getMessage(), e);
@@ -42,23 +45,23 @@ public class FormVersionServiceImpl implements FormVersionService {
 
     @Override
     public FormVersion getById(Long id) {
-        return formVersionMapper.selectById(id);
+        return formVersionMapper.selectById(id, currentTenantId());
     }
 
     @Override
     public List<FormVersion> listByTemplateId(Long templateId) {
-        return formVersionMapper.selectByTemplateId(templateId);
+        return formVersionMapper.selectByTemplateId(templateId, currentTenantId());
     }
 
     @Override
     public FormVersion getByTemplateIdAndVersion(Long templateId, Integer version) {
-        return formVersionMapper.selectByTemplateIdAndVersion(templateId, version);
+        return formVersionMapper.selectByTemplateIdAndVersion(templateId, version, currentTenantId());
     }
 
     @Override
     @Transactional
     public FormVersion createVersion(Long templateId, String changeLog) {
-        FormTemplate template = formTemplateMapper.selectById(templateId);
+        FormTemplate template = formTemplateMapper.selectById(templateId, currentTenantId());
         if (template == null) {
             throw new IllegalArgumentException("模板不存在");
         }
@@ -71,6 +74,7 @@ public class FormVersionServiceImpl implements FormVersionService {
         version.setFieldsJson(serializeFields(templateId));
         version.setChangeLog(changeLog != null ? changeLog : "手动创建快照");
         version.setCreatedAt(LocalDateTime.now());
+        version.setTenantId(currentTenantId());
         formVersionMapper.insert(version);
 
         template.setVersion(newVersion);
@@ -82,8 +86,8 @@ public class FormVersionServiceImpl implements FormVersionService {
 
     @Override
     public VersionCompareResultVO compareVersions(Long templateId, Integer sourceVersion, Integer targetVersion) {
-        FormVersion source = formVersionMapper.selectByTemplateIdAndVersion(templateId, sourceVersion);
-        FormVersion target = formVersionMapper.selectByTemplateIdAndVersion(templateId, targetVersion);
+        FormVersion source = formVersionMapper.selectByTemplateIdAndVersion(templateId, sourceVersion, currentTenantId());
+        FormVersion target = formVersionMapper.selectByTemplateIdAndVersion(templateId, targetVersion, currentTenantId());
 
         if (source == null) {
             throw new IllegalArgumentException("源版本不存在: v" + sourceVersion);
@@ -113,12 +117,12 @@ public class FormVersionServiceImpl implements FormVersionService {
     @Override
     @Transactional
     public RollbackResultVO rollbackVersion(Long templateId, VersionRollbackDTO dto) {
-        FormTemplate template = formTemplateMapper.selectById(templateId);
+        FormTemplate template = formTemplateMapper.selectById(templateId, currentTenantId());
         if (template == null) {
             throw new IllegalArgumentException("模板不存在");
         }
 
-        FormVersion targetVersion = formVersionMapper.selectByTemplateIdAndVersion(templateId, dto.getTargetVersion());
+        FormVersion targetVersion = formVersionMapper.selectByTemplateIdAndVersion(templateId, dto.getTargetVersion(), currentTenantId());
         if (targetVersion == null) {
             throw new IllegalArgumentException("目标版本不存在: v" + dto.getTargetVersion());
         }
@@ -134,6 +138,7 @@ public class FormVersionServiceImpl implements FormVersionService {
         rollbackSnapshot.setFieldsJson(serializeFields(templateId));
         rollbackSnapshot.setChangeLog("回滚前快照，目标版本 v" + dto.getTargetVersion());
         rollbackSnapshot.setCreatedAt(LocalDateTime.now());
+        rollbackSnapshot.setTenantId(currentTenantId());
         formVersionMapper.insert(rollbackSnapshot);
 
         formFieldMapper.deleteByTemplateId(templateId);
@@ -155,6 +160,7 @@ public class FormVersionServiceImpl implements FormVersionService {
         rollbackVersionRecord.setFieldsJson(targetVersion.getFieldsJson());
         rollbackVersionRecord.setChangeLog(dto.getChangeLog() != null ? dto.getChangeLog() : "回滚至版本 v" + dto.getTargetVersion());
         rollbackVersionRecord.setCreatedAt(LocalDateTime.now());
+        rollbackVersionRecord.setTenantId(currentTenantId());
         formVersionMapper.insert(rollbackVersionRecord);
 
         RollbackResultVO result = new RollbackResultVO();
@@ -174,6 +180,7 @@ public class FormVersionServiceImpl implements FormVersionService {
             for (FormField field : fields) {
                 field.setId(null);
                 field.setTemplateId(templateId);
+                field.setTenantId(currentTenantId());
             }
             return fields;
         } catch (Exception e) {

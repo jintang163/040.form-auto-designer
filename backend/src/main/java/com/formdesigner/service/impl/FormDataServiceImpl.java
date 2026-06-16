@@ -1,6 +1,7 @@
 package com.formdesigner.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.formdesigner.common.TenantContext;
 import com.formdesigner.dto.FormSubmitDTO;
 import com.formdesigner.entity.FormData;
 import com.formdesigner.entity.FormField;
@@ -36,9 +37,14 @@ public class FormDataServiceImpl implements FormDataService {
     private final SmartRecommendService smartRecommendService;
     private final ObjectMapper objectMapper;
 
+    private Long currentTenantId() {
+        Long tid = TenantContext.getTenantId();
+        return tid != null ? tid : 1L;
+    }
+
     @Override
     public FormData submit(FormSubmitDTO dto) {
-        FormTemplate template = formTemplateMapper.selectById(dto.getTemplateId());
+        FormTemplate template = formTemplateMapper.selectById(dto.getTemplateId(), currentTenantId());
         if (template == null) {
             throw new IllegalArgumentException("模板不存在");
         }
@@ -49,6 +55,7 @@ public class FormDataServiceImpl implements FormDataService {
         formData.setFieldValuesJson(dto.getFieldValuesJson());
         formData.setSubmitterId(dto.getSubmitterId());
         formData.setSubmittedAt(LocalDateTime.now());
+        formData.setTenantId(currentTenantId());
         formDataMapper.insert(formData);
 
         dataStatisticsService.syncToClickHouse(formData);
@@ -70,12 +77,12 @@ public class FormDataServiceImpl implements FormDataService {
 
     @Override
     public FormData getById(Long id) {
-        return formDataMapper.selectById(id);
+        return formDataMapper.selectById(id, currentTenantId());
     }
 
     @Override
     public List<FormData> listByTemplateId(Long templateId) {
-        return formDataMapper.selectByTemplateId(templateId);
+        return formDataMapper.selectByTemplateId(templateId, currentTenantId());
     }
 
     @Override
@@ -83,8 +90,8 @@ public class FormDataServiceImpl implements FormDataService {
                                                       String fieldName, String fieldValue) {
         int offset = (page - 1) * pageSize;
         List<FormData> list = formDataMapper.selectByTemplateIdPaged(
-                templateId, offset, pageSize, fieldName, fieldValue);
-        Long total = formDataMapper.countByTemplateId(templateId, fieldName, fieldValue);
+                templateId, offset, pageSize, fieldName, fieldValue, currentTenantId());
+        Long total = formDataMapper.countByTemplateId(templateId, fieldName, fieldValue, currentTenantId());
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -98,9 +105,9 @@ public class FormDataServiceImpl implements FormDataService {
     public void exportExcel(Long templateId, String fieldName, String fieldValue,
                             HttpServletResponse response) {
         List<FormData> dataList = formDataMapper.selectByTemplateIdFiltered(
-                templateId, fieldName, fieldValue);
-        List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
-        FormTemplate template = formTemplateMapper.selectById(templateId);
+                templateId, fieldName, fieldValue, currentTenantId());
+        List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
+        FormTemplate template = formTemplateMapper.selectById(templateId, currentTenantId());
 
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet(template != null ? template.getTemplateName() : "数据");

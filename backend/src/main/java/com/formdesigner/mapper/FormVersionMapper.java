@@ -10,9 +10,11 @@ public interface FormVersionMapper {
 
     int insert(FormVersion formVersion);
 
-    FormVersion selectById(@Param("id") Long id);
+    FormVersion selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
-    List<FormVersion> selectByTemplateId(@Param("templateId") Long templateId);
+    List<FormVersion> selectByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
-    FormVersion selectByTemplateIdAndVersion(@Param("templateId") Long templateId, @Param("version") Integer version);
+    FormVersion selectByTemplateIdAndVersion(@Param("templateId") Long templateId,
+                                              @Param("version") Integer version,
+                                              @Param("tenantId") Long tenantId);
 }

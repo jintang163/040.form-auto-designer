@@ -16,4 +16,5 @@ public class FormField {
     private String validationRules;
     private Integer sortOrder;
     private String layoutConfig;
+    private Long tenantId;
 }

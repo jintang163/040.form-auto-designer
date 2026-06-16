@@ -10,11 +10,11 @@ public interface FormTemplateMapper {
 
     int insert(FormTemplate formTemplate);
 
-    FormTemplate selectById(@Param("id") Long id);
+    FormTemplate selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
-    FormTemplate selectByTemplateCode(@Param("templateCode") String templateCode);
+    FormTemplate selectByTemplateCode(@Param("templateCode") String templateCode, @Param("tenantId") Long tenantId);
 
-    List<FormTemplate> selectAll();
+    List<FormTemplate> selectAll(@Param("tenantId") Long tenantId);
 
     int updateById(FormTemplate formTemplate);
 

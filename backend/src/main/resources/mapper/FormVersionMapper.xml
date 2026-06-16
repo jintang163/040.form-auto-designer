@@ -3,23 +3,23 @@
 <mapper namespace="com.formdesigner.mapper.FormVersionMapper">
 
     <insert id="insert" parameterType="com.formdesigner.entity.FormVersion" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO form_version (template_id, version, schema_json, fields_json, change_log, created_at)
-        VALUES (#{templateId}, #{version}, #{schemaJson}, #{fieldsJson}, #{changeLog}, #{createdAt})
+        INSERT INTO form_version (tenant_id, template_id, version, schema_json, fields_json, change_log, created_at)
+        VALUES (#{tenantId}, #{templateId}, #{version}, #{schemaJson}, #{fieldsJson}, #{changeLog}, #{createdAt})
     </insert>
 
     <select id="selectById" resultType="com.formdesigner.entity.FormVersion">
-        SELECT id, template_id, version, schema_json, fields_json, change_log, created_at
-        FROM form_version WHERE id = #{id}
+        SELECT id, tenant_id, template_id, version, schema_json, fields_json, change_log, created_at
+        FROM form_version WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormVersion">
-        SELECT id, template_id, version, schema_json, fields_json, change_log, created_at
-        FROM form_version WHERE template_id = #{templateId} ORDER BY version DESC
+        SELECT id, tenant_id, template_id, version, schema_json, fields_json, change_log, created_at
+        FROM form_version WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY version DESC
     </select>
 
     <select id="selectByTemplateIdAndVersion" resultType="com.formdesigner.entity.FormVersion">
-        SELECT id, template_id, version, schema_json, fields_json, change_log, created_at
-        FROM form_version WHERE template_id = #{templateId} AND version = #{version}
+        SELECT id, tenant_id, template_id, version, schema_json, fields_json, change_log, created_at
+        FROM form_version WHERE template_id = #{templateId} AND version = #{version} AND tenant_id = #{tenantId}
     </select>
 
 </mapper>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.SysTenantUserMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.SysTenantUser">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="role" property="role"/>
+        <result column="joined_at" property="joinedAt"/>
+    </resultMap>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT id, tenant_id, user_id, user_name, role, joined_at
+        FROM sys_tenant_user
+        WHERE user_id = #{userId}
+        ORDER BY joined_at ASC
+    </select>
+
+    <select id="selectByTenantId" resultMap="BaseResultMap">
+        SELECT id, tenant_id, user_id, user_name, role, joined_at
+        FROM sys_tenant_user
+        WHERE tenant_id = #{tenantId}
+        ORDER BY joined_at ASC
+    </select>
+
+    <select id="selectByTenantIdAndUserId" resultMap="BaseResultMap">
+        SELECT id, tenant_id, user_id, user_name, role, joined_at
+        FROM sys_tenant_user
+        WHERE tenant_id = #{tenantId} AND user_id = #{userId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_tenant_user (tenant_id, user_id, user_name, role, joined_at)
+        VALUES (#{tenantId}, #{userId}, #{userName}, #{role}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM sys_tenant_user WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByTenantIdAndUserId">
+        DELETE FROM sys_tenant_user WHERE tenant_id = #{tenantId} AND user_id = #{userId}
+    </delete>
+
+</mapper>

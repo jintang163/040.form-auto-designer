@@ -15,26 +15,32 @@ public interface FieldValueStatsMapper {
     FieldValueStats selectByUniqueKey(@Param("templateId") Long templateId,
                                        @Param("fieldName") String fieldName,
                                        @Param("fieldValue") String fieldValue,
-                                       @Param("submitterId") String submitterId);
+                                       @Param("submitterId") String submitterId,
+                                       @Param("tenantId") Long tenantId);
 
     List<FieldValueStats> selectByTemplateIdAndFieldName(@Param("templateId") Long templateId,
                                                           @Param("fieldName") String fieldName,
-                                                          @Param("submitterId") String submitterId);
+                                                          @Param("submitterId") String submitterId,
+                                                          @Param("tenantId") Long tenantId);
 
     List<FieldValueStats> selectByTemplateIdAndFieldNameGlobal(@Param("templateId") Long templateId,
-                                                                @Param("fieldName") String fieldName);
+                                                                @Param("fieldName") String fieldName,
+                                                                @Param("tenantId") Long tenantId);
 
     List<FieldValueStats> selectTopNBySubmitter(@Param("templateId") Long templateId,
                                                  @Param("fieldName") String fieldName,
                                                  @Param("submitterId") String submitterId,
-                                                 @Param("limit") int limit);
+                                                 @Param("limit") int limit,
+                                                 @Param("tenantId") Long tenantId);
 
     List<FieldValueStats> selectTopNGlobal(@Param("templateId") Long templateId,
                                             @Param("fieldName") String fieldName,
-                                            @Param("limit") int limit);
+                                            @Param("limit") int limit,
+                                            @Param("tenantId") Long tenantId);
 
-    int deleteByTemplateId(@Param("templateId") Long templateId);
+    int deleteByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
     List<FieldValueStats> selectAllPerUserByTemplateIdAndFieldName(@Param("templateId") Long templateId,
-                                                                     @Param("fieldName") String fieldName);
+                                                                     @Param("fieldName") String fieldName,
+                                                                     @Param("tenantId") Long tenantId);
 }

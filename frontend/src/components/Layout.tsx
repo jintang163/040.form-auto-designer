@@ -7,7 +7,9 @@ import {
   HomeOutlined,
   BarChartOutlined,
   ApiOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
+import TenantSwitcher from './TenantSwitcher';
 
 const { Sider, Header, Content } = AntLayout;
 
@@ -32,6 +34,11 @@ const menuItems = [
     icon: <ApiOutlined />,
     label: '推送规则',
   },
+  {
+    key: '/tenants',
+    icon: <TeamOutlined />,
+    label: '租户管理',
+  },
 ];
 
 function buildBreadcrumb(pathname: string) {
@@ -44,6 +51,7 @@ function buildBreadcrumb(pathname: string) {
     'form-data': '数据填报',
     statistics: '统计分析',
     'webhook-rules': '推送规则',
+    tenants: '租户管理',
   };
   const items = [{ title: <><HomeOutlined /><span>首页</span></> }];
   let path = '';
@@ -76,8 +84,9 @@ export default function Layout() {
         />
       </Sider>
       <AntLayout>
-        <Header style={{ padding: '0 24px', background: '#fff' }}>
+        <Header style={{ padding: '0 24px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Breadcrumb items={buildBreadcrumb(location.pathname)} />
+          <TenantSwitcher />
         </Header>
         <Content style={{ margin: 16, padding: 24, background: '#fff', borderRadius: 8 }}>
           <Outlet />

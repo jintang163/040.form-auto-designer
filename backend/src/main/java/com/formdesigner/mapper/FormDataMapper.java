@@ -10,28 +10,32 @@ public interface FormDataMapper {
 
     int insert(FormData formData);
 
-    FormData selectById(@Param("id") Long id);
+    FormData selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
-    List<FormData> selectByTemplateId(@Param("templateId") Long templateId);
+    List<FormData> selectByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
-    List<FormData> selectAll();
+    List<FormData> selectAll(@Param("tenantId") Long tenantId);
 
     List<FormData> selectByTemplateIdPaged(@Param("templateId") Long templateId,
                                            @Param("offset") int offset,
                                            @Param("limit") int limit,
                                            @Param("fieldName") String fieldName,
-                                           @Param("fieldValue") String fieldValue);
+                                           @Param("fieldValue") String fieldValue,
+                                           @Param("tenantId") Long tenantId);
 
     Long countByTemplateId(@Param("templateId") Long templateId,
                            @Param("fieldName") String fieldName,
-                           @Param("fieldValue") String fieldValue);
+                           @Param("fieldValue") String fieldValue,
+                           @Param("tenantId") Long tenantId);
 
     List<FormData> selectByTemplateIdFiltered(@Param("templateId") Long templateId,
                                               @Param("fieldName") String fieldName,
-                                              @Param("fieldValue") String fieldValue);
+                                              @Param("fieldValue") String fieldValue,
+                                              @Param("tenantId") Long tenantId);
 
     List<FormData> selectBySubmitterId(@Param("templateId") Long templateId,
-                                        @Param("submitterId") String submitterId);
+                                        @Param("submitterId") String submitterId,
+                                        @Param("tenantId") Long tenantId);
 
     int deleteById(@Param("id") Long id);
 }

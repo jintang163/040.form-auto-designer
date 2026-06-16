@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.SysTenantMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.SysTenant">
+        <id column="id" property="id"/>
+        <result column="tenant_code" property="tenantCode"/>
+        <result column="tenant_name" property="tenantName"/>
+        <result column="description" property="description"/>
+        <result column="table_prefix" property="tablePrefix"/>
+        <result column="admin_user" property="adminUser"/>
+        <result column="admin_email" property="adminEmail"/>
+        <result column="admin_phone" property="adminPhone"/>
+        <result column="status" property="status"/>
+        <result column="is_system" property="isSystem"/>
+        <result column="expired_at" property="expiredAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, tenant_code, tenant_name, description, table_prefix, admin_user, admin_email,
+        admin_phone, status, is_system, expired_at, created_at, updated_at, is_deleted
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_tenant
+        WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_tenant
+        WHERE tenant_code = #{tenantCode} AND is_deleted = 0
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_tenant
+        WHERE is_deleted = 0
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectByStatus" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_tenant
+        WHERE status = #{status} AND is_deleted = 0
+        ORDER BY id ASC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_tenant (tenant_code, tenant_name, description, table_prefix,
+                                admin_user, admin_email, admin_phone, status, is_system,
+                                expired_at, created_at, updated_at, is_deleted)
+        VALUES (#{tenantCode}, #{tenantName}, #{description}, #{tablePrefix},
+                #{adminUser}, #{adminEmail}, #{adminPhone}, #{status}, #{isSystem},
+                #{expiredAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+    </insert>
+
+    <update id="updateById">
+        UPDATE sys_tenant
+        <set>
+            <if test="tenantName != null">tenant_name = #{tenantName},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="tablePrefix != null">table_prefix = #{tablePrefix},</if>
+            <if test="adminUser != null">admin_user = #{adminUser},</if>
+            <if test="adminEmail != null">admin_email = #{adminEmail},</if>
+            <if test="adminPhone != null">admin_phone = #{adminPhone},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="expiredAt != null">expired_at = #{expiredAt},</if>
+            updated_at = CURRENT_TIMESTAMP,
+        </set>
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+    <update id="deleteById">
+        UPDATE sys_tenant SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+</mapper>

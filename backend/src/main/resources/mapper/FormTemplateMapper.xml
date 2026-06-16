@@ -3,23 +3,23 @@
 <mapper namespace="com.formdesigner.mapper.FormTemplateMapper">
 
     <insert id="insert" parameterType="com.formdesigner.entity.FormTemplate" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO form_template (template_name, template_code, description, schema_json, version, status, created_at, updated_at)
-        VALUES (#{templateName}, #{templateCode}, #{description}, #{schemaJson}, #{version}, #{status}, #{createdAt}, #{updatedAt})
+        INSERT INTO form_template (template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at)
+        VALUES (#{templateName}, #{templateCode}, #{description}, #{schemaJson}, #{version}, #{status}, #{tenantId}, #{createdAt}, #{updatedAt})
     </insert>
 
     <select id="selectById" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, created_at, updated_at
-        FROM form_template WHERE id = #{id}
+        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        FROM form_template WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectByTemplateCode" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, created_at, updated_at
-        FROM form_template WHERE template_code = #{templateCode}
+        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        FROM form_template WHERE template_code = #{templateCode} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectAll" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, created_at, updated_at
-        FROM form_template ORDER BY created_at DESC
+        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        FROM form_template WHERE tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 
     <update id="updateById" parameterType="com.formdesigner.entity.FormTemplate">
@@ -31,6 +31,7 @@
             <if test="schemaJson != null">schema_json = #{schemaJson},</if>
             <if test="version != null">version = #{version},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="tenantId != null">tenant_id = #{tenantId},</if>
             updated_at = #{updatedAt},
         </set>
         WHERE id = #{id}
