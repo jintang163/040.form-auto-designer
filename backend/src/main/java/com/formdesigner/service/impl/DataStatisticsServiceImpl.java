@@ -12,6 +12,7 @@ import com.formdesigner.vo.FieldDistributionVO;
 import com.formdesigner.vo.NumericAggregationVO;
 import com.formdesigner.vo.StatisticsDashboardVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -30,22 +31,214 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
     private final FormFieldMapper formFieldMapper;
     private final FormTemplateMapper formTemplateMapper;
     private final ObjectMapper objectMapper;
-    private final JdbcTemplate clickhouseJdbcTemplate;
+
+    @Autowired(required = false)
+    @Qualifier("clickhouseJdbcTemplate")
+    private JdbcTemplate clickhouseJdbcTemplate;
 
     public DataStatisticsServiceImpl(FormDataMapper formDataMapper,
                                      FormFieldMapper formFieldMapper,
                                      FormTemplateMapper formTemplateMapper,
-                                     ObjectMapper objectMapper,
-                                     @Qualifier("clickhouseJdbcTemplate") JdbcTemplate clickhouseJdbcTemplate) {
+                                     ObjectMapper objectMapper) {
         this.formDataMapper = formDataMapper;
         this.formFieldMapper = formFieldMapper;
         this.formTemplateMapper = formTemplateMapper;
         this.objectMapper = objectMapper;
-        this.clickhouseJdbcTemplate = clickhouseJdbcTemplate;
+    }
+
+    private boolean isClickHouseAvailable() {
+        if (clickhouseJdbcTemplate == null) {
+            return false;
+        }
+        try {
+            clickhouseJdbcTemplate.queryForObject("SELECT 1", Integer.class);
+            return true;
+        } catch (Exception e) {
+            log.warn("ClickHouse不可用，将降级使用MySQL统计: {}", e.getMessage());
+            return false;
+        }
     }
 
     @Override
     public StatisticsDashboardVO getDashboard(Long templateId) {
+        if (isClickHouseAvailable()) {
+            try {
+                return getDashboardFromClickHouse(templateId);
+            } catch (Exception e) {
+                log.error("ClickHouse统计查询失败，降级使用MySQL: {}", e.getMessage());
+            }
+        }
+        return getDashboardFromMySQL(templateId);
+    }
+
+    @Override
+    public FieldDistributionVO getFieldDistribution(Long templateId, String fieldName) {
+        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName);
+        if (field == null) return null;
+
+        if (isClickHouseAvailable()) {
+            try {
+                return getFieldDistributionFromClickHouse(templateId, field);
+            } catch (Exception e) {
+                log.error("ClickHouse字段分布查询失败，降级使用MySQL: {}", e.getMessage());
+            }
+        }
+        List<FormData> dataList = formDataMapper.selectByTemplateId(templateId);
+        return computeFieldDistributionInMemory(dataList, field);
+    }
+
+    @Override
+    public NumericAggregationVO getNumericAggregation(Long templateId, String fieldName) {
+        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName);
+        if (field == null) return null;
+
+        if (isClickHouseAvailable()) {
+            try {
+                return getNumericAggregationFromClickHouse(templateId, field);
+            } catch (Exception e) {
+                log.error("ClickHouse数值聚合查询失败，降级使用MySQL: {}", e.getMessage());
+            }
+        }
+        List<FormData> dataList = formDataMapper.selectByTemplateId(templateId);
+        return computeNumericAggregationInMemory(dataList, field);
+    }
+
+    // ============================================================
+    // ClickHouse 聚合查询实现
+    // ============================================================
+
+    private StatisticsDashboardVO getDashboardFromClickHouse(Long templateId) {
+        StatisticsDashboardVO dashboard = new StatisticsDashboardVO();
+
+        String templateFilter = templateId != null ? " WHERE template_id = " + templateId : "";
+
+        Long total = clickhouseJdbcTemplate.queryForObject(
+                "SELECT count() FROM form_data_analytics" + templateFilter, Long.class);
+        dashboard.setTotalRecords(total != null ? total : 0L);
+
+        List<StatisticsDashboardVO.TemplateRecordCount> templateCounts = clickhouseJdbcTemplate.query(
+                "SELECT template_id, count() AS cnt FROM form_data_analytics" + templateFilter +
+                        " GROUP BY template_id ORDER BY cnt DESC",
+                (rs, rowNum) -> {
+                    StatisticsDashboardVO.TemplateRecordCount tc = new StatisticsDashboardVO.TemplateRecordCount();
+                    Long tid = rs.getLong("template_id");
+                    tc.setTemplateId(tid);
+                    FormTemplate t = formTemplateMapper.selectById(tid);
+                    tc.setTemplateName(t != null ? t.getTemplateName() : "未知模板");
+                    tc.setCount(rs.getLong("cnt"));
+                    return tc;
+                });
+        dashboard.setTemplateCounts(templateCounts);
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate earliest = LocalDate.now().minusDays(29);
+        Map<String, Long> trendMap = new LinkedHashMap<>();
+        for (int i = 0; i < 30; i++) {
+            trendMap.put(earliest.plusDays(i).format(fmt), 0L);
+        }
+
+        List<Map<String, Object>> trendRows = clickhouseJdbcTemplate.queryForList(
+                "SELECT toString(toDate(submitted_at)) AS dt, count() AS cnt FROM form_data_analytics" +
+                        templateFilter + " AND submitted_at >= ? GROUP BY toDate(submitted_at) ORDER BY dt",
+                java.sql.Date.valueOf(earliest));
+        for (Map<String, Object> row : trendRows) {
+            String dt = String.valueOf(row.get("dt"));
+            Long cnt = ((Number) row.get("cnt")).longValue();
+            trendMap.merge(dt, cnt, Long::sum);
+        }
+
+        List<StatisticsDashboardVO.SubmissionTrend> trend = new ArrayList<>();
+        for (Map.Entry<String, Long> e : trendMap.entrySet()) {
+            StatisticsDashboardVO.SubmissionTrend st = new StatisticsDashboardVO.SubmissionTrend();
+            st.setDate(e.getKey());
+            st.setCount(e.getValue());
+            trend.add(st);
+        }
+        dashboard.setSubmissionTrend(trend);
+
+        if (templateId != null) {
+            List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
+            List<FieldDistributionVO> distributions = new ArrayList<>();
+            List<NumericAggregationVO> aggregations = new ArrayList<>();
+
+            for (FormField field : fields) {
+                try {
+                    if ("select".equals(field.getInputType()) || "multi_select".equals(field.getInputType())
+                            || "switch".equals(field.getInputType())) {
+                        FieldDistributionVO dist = getFieldDistributionFromClickHouse(templateId, field);
+                        if (dist != null) distributions.add(dist);
+                    } else if ("number".equals(field.getInputType())) {
+                        NumericAggregationVO agg = getNumericAggregationFromClickHouse(templateId, field);
+                        if (agg != null) aggregations.add(agg);
+                    }
+                } catch (Exception ex) {
+                    log.warn("ClickHouse字段统计失败, field={}: {}", field.getFieldName(), ex.getMessage());
+                }
+            }
+            dashboard.setFieldDistributions(distributions);
+            dashboard.setNumericAggregations(aggregations);
+        } else {
+            dashboard.setFieldDistributions(Collections.emptyList());
+            dashboard.setNumericAggregations(Collections.emptyList());
+        }
+
+        return dashboard;
+    }
+
+    private FieldDistributionVO getFieldDistributionFromClickHouse(Long templateId, FormField field) {
+        FieldDistributionVO vo = new FieldDistributionVO();
+        vo.setFieldName(field.getFieldName());
+        vo.setFieldLabel(field.getFieldLabel());
+
+        String sql = "SELECT ifNull(JSONExtractString(field_values_json, ?), '(空)') AS val, count() AS cnt " +
+                "FROM form_data_analytics WHERE template_id = ? GROUP BY val ORDER BY cnt DESC";
+        List<FieldDistributionVO.DistributionItem> items = clickhouseJdbcTemplate.query(
+                sql, new Object[]{field.getFieldName(), templateId},
+                (rs, rowNum) -> {
+                    FieldDistributionVO.DistributionItem item = new FieldDistributionVO.DistributionItem();
+                    String val = rs.getString("val");
+                    item.setValue(val);
+                    item.setLabel(val);
+                    item.setCount(rs.getLong("cnt"));
+                    return item;
+                });
+        vo.setItems(items);
+        return vo;
+    }
+
+    private NumericAggregationVO getNumericAggregationFromClickHouse(Long templateId, FormField field) {
+        NumericAggregationVO vo = new NumericAggregationVO();
+        vo.setFieldName(field.getFieldName());
+        vo.setFieldLabel(field.getFieldLabel());
+
+        String sql = "SELECT " +
+                "sum(toFloat64OrNull(JSONExtractString(field_values_json, ?))) AS sum_val, " +
+                "avg(toFloat64OrNull(JSONExtractString(field_values_json, ?))) AS avg_val, " +
+                "min(toFloat64OrNull(JSONExtractString(field_values_json, ?))) AS min_val, " +
+                "max(toFloat64OrNull(JSONExtractString(field_values_json, ?))) AS max_val, " +
+                "count() AS cnt " +
+                "FROM form_data_analytics WHERE template_id = ?";
+        return clickhouseJdbcTemplate.queryForObject(
+                sql,
+                new Object[]{field.getFieldName(), field.getFieldName(), field.getFieldName(), field.getFieldName(), templateId},
+                (rs, rowNum) -> {
+                    NumericAggregationVO agg = new NumericAggregationVO();
+                    agg.setFieldName(field.getFieldName());
+                    agg.setFieldLabel(field.getFieldLabel());
+                    agg.setSum(rs.getDouble("sum_val"));
+                    agg.setAvg(rs.getDouble("avg_val"));
+                    agg.setMin(rs.getDouble("min_val"));
+                    agg.setMax(rs.getDouble("max_val"));
+                    agg.setCount(rs.getLong("cnt"));
+                    return agg;
+                });
+    }
+
+    // ============================================================
+    // MySQL 内存计算（降级方案）
+    // ============================================================
+
+    private StatisticsDashboardVO getDashboardFromMySQL(Long templateId) {
         StatisticsDashboardVO dashboard = new StatisticsDashboardVO();
 
         List<FormData> allData;
@@ -98,10 +291,10 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
             for (FormField field : fields) {
                 if ("select".equals(field.getInputType()) || "multi_select".equals(field.getInputType())
                         || "switch".equals(field.getInputType())) {
-                    FieldDistributionVO dist = computeFieldDistribution(allData, field);
+                    FieldDistributionVO dist = computeFieldDistributionInMemory(allData, field);
                     if (dist != null) distributions.add(dist);
                 } else if ("number".equals(field.getInputType())) {
-                    NumericAggregationVO agg = computeNumericAggregation(allData, field);
+                    NumericAggregationVO agg = computeNumericAggregationInMemory(allData, field);
                     if (agg != null) aggregations.add(agg);
                 }
             }
@@ -115,21 +308,7 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
         return dashboard;
     }
 
-    @Override
-    public FieldDistributionVO getFieldDistribution(Long templateId, String fieldName) {
-        List<FormData> dataList = formDataMapper.selectByTemplateId(templateId);
-        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName);
-        return computeFieldDistribution(dataList, field);
-    }
-
-    @Override
-    public NumericAggregationVO getNumericAggregation(Long templateId, String fieldName) {
-        List<FormData> dataList = formDataMapper.selectByTemplateId(templateId);
-        FormField field = formFieldMapper.selectByTemplateIdAndFieldName(templateId, fieldName);
-        return computeNumericAggregation(dataList, field);
-    }
-
-    private FieldDistributionVO computeFieldDistribution(List<FormData> dataList, FormField field) {
+    private FieldDistributionVO computeFieldDistributionInMemory(List<FormData> dataList, FormField field) {
         if (field == null || dataList.isEmpty()) return null;
         FieldDistributionVO vo = new FieldDistributionVO();
         vo.setFieldName(field.getFieldName());
@@ -158,7 +337,7 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
         return vo;
     }
 
-    private NumericAggregationVO computeNumericAggregation(List<FormData> dataList, FormField field) {
+    private NumericAggregationVO computeNumericAggregationInMemory(List<FormData> dataList, FormField field) {
         if (field == null || dataList.isEmpty()) return null;
         NumericAggregationVO vo = new NumericAggregationVO();
         vo.setFieldName(field.getFieldName());
@@ -189,7 +368,12 @@ public class DataStatisticsServiceImpl implements DataStatisticsService {
         return vo;
     }
 
+    @Override
     public void syncToClickHouse(FormData formData) {
+        if (!isClickHouseAvailable()) {
+            log.debug("ClickHouse不可用，跳过数据同步, id={}", formData.getId());
+            return;
+        }
         try {
             clickhouseJdbcTemplate.update(
                     "INSERT INTO form_data_analytics (id, template_id, version, field_values_json, submitter_id, submitted_at) VALUES (?, ?, ?, ?, ?, ?)",

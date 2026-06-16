@@ -109,6 +109,7 @@
             <artifactId>clickhouse-jdbc</artifactId>
             <version>${clickhouse.version}</version>
             <classifier>http</classifier>
+            <optional>true</optional>
         </dependency>
 
         <dependency>

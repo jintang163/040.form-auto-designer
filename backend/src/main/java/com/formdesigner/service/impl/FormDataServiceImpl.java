@@ -89,7 +89,8 @@ public class FormDataServiceImpl implements FormDataService {
     @Override
     public void exportExcel(Long templateId, String fieldName, String fieldValue,
                             HttpServletResponse response) {
-        List<FormData> dataList = formDataMapper.selectByTemplateId(templateId);
+        List<FormData> dataList = formDataMapper.selectByTemplateIdFiltered(
+                templateId, fieldName, fieldValue);
         List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
         FormTemplate template = formTemplateMapper.selectById(templateId);
 

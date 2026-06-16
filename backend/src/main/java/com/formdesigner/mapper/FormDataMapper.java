@@ -26,5 +26,9 @@ public interface FormDataMapper {
                            @Param("fieldName") String fieldName,
                            @Param("fieldValue") String fieldValue);
 
+    List<FormData> selectByTemplateIdFiltered(@Param("templateId") Long templateId,
+                                              @Param("fieldName") String fieldName,
+                                              @Param("fieldValue") String fieldValue);
+
     int deleteById(@Param("id") Long id);
 }

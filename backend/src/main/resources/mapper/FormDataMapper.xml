@@ -41,6 +41,16 @@
         </if>
     </select>
 
+    <select id="selectByTemplateIdFiltered" resultType="com.formdesigner.entity.FormData">
+        SELECT id, template_id, version, field_values_json, submitter_id, submitted_at
+        FROM form_data
+        WHERE template_id = #{templateId}
+        <if test="fieldName != null and fieldName != '' and fieldValue != null and fieldValue != ''">
+            AND field_values_json LIKE CONCAT('%', #{fieldName}, '%', #{fieldValue}, '%')
+        </if>
+        ORDER BY submitted_at DESC
+    </select>
+
     <delete id="deleteById">
         DELETE FROM form_data WHERE id = #{id}
     </delete>

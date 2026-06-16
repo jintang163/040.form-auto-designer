@@ -65,10 +65,12 @@ voice:
     app-id:
 
 clickhouse:
+  enabled: true
   url: jdbc:clickhouse://localhost:8123/form_analytics
   username: default
   password:
   driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+  timeout-ms: 5000
 
 logging:
   level:
