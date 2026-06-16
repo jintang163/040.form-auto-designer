@@ -11,6 +11,7 @@ import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.mapper.FormVersionMapper;
 import com.formdesigner.common.TenantContext;
 import com.formdesigner.service.FormTemplateService;
+import com.formdesigner.service.SysTenantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class FormTemplateServiceImpl implements FormTemplateService {
     private final FormTemplateMapper formTemplateMapper;
     private final FormVersionMapper formVersionMapper;
     private final FormFieldMapper formFieldMapper;
+    private final SysTenantService tenantService;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private Long currentTenantId() {
@@ -53,8 +55,10 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         template.setStatus("DRAFT");
         template.setCreatedAt(LocalDateTime.now());
         template.setUpdatedAt(LocalDateTime.now());
+        tenantService.assertTemplateQuota(currentTenantId(), 0);
         template.setTenantId(currentTenantId());
         formTemplateMapper.insert(template);
+        tenantService.incrementTemplateCount(currentTenantId(), 1);
 
         String fieldsJson = serializeFields(template.getId());
 
@@ -128,7 +132,9 @@ public class FormTemplateServiceImpl implements FormTemplateService {
     @Override
     @Transactional
     public boolean deleteById(Long id) {
-        return formTemplateMapper.deleteById(id) > 0;
+        boolean deleted = formTemplateMapper.deleteById(id) > 0;
+        tenantService.incrementTemplateCount(currentTenantId(), -1);
+        return deleted;
     }
 
     @Override
@@ -168,8 +174,6 @@ public class FormTemplateServiceImpl implements FormTemplateService {
             throw new IllegalArgumentException("模板不存在");
         }
 
-        List<FormField> sourceFields = formFieldMapper.selectByTemplateId(id, currentTenantId());
-
         FormTemplate copy = new FormTemplate();
         copy.setTemplateName(source.getTemplateName() + "_副本");
         copy.setTemplateCode(source.getTemplateCode() + "_copy_" + System.currentTimeMillis());
@@ -179,8 +183,12 @@ public class FormTemplateServiceImpl implements FormTemplateService {
         copy.setStatus("DRAFT");
         copy.setCreatedAt(LocalDateTime.now());
         copy.setUpdatedAt(LocalDateTime.now());
+        List<FormField> sourceFields = formFieldMapper.selectByTemplateId(id, currentTenantId());
+        int fieldCount = sourceFields != null ? sourceFields.size() : 0;
+        tenantService.assertTemplateQuota(currentTenantId(), fieldCount);
         copy.setTenantId(currentTenantId());
         formTemplateMapper.insert(copy);
+        tenantService.incrementTemplateCount(currentTenantId(), 1);
 
         for (FormField field : sourceFields) {
             FormField newField = new FormField();

@@ -188,8 +188,68 @@ public class SysTenantServiceImpl implements SysTenantService {
                 return quota.getCurrentFormSubmissions() < quota.getMaxFormSubmissions();
             case "apiCalls":
                 return quota.getCurrentApiCallsDaily() < quota.getMaxApiCallsDaily();
+            case "storage":
+                return quota.getCurrentStorageMb().compareTo(BigDecimal.valueOf(quota.getMaxStorageMb())) < 0;
             default:
                 return true;
+        }
+    }
+
+    @Override
+    public void incrementTemplateCount(Long tenantId, int delta) {
+        quotaMapper.incrementTemplateCount(tenantId, delta);
+    }
+
+    @Override
+    public void incrementFormSubmissionCount(Long tenantId, int delta) {
+        quotaMapper.incrementFormSubmissionCount(tenantId, delta);
+    }
+
+    @Override
+    public void incrementApiCallCount(Long tenantId) {
+        String today = java.time.LocalDate.now().toString();
+        quotaMapper.incrementApiCallCount(tenantId, today);
+    }
+
+    @Override
+    public void assertTemplateQuota(Long tenantId, int fieldCount) {
+        SysTenantQuota quota = quotaMapper.selectByTenantId(tenantId);
+        if (quota == null) {
+            throw new IllegalArgumentException("租户配额不存在");
+        }
+        if (quota.getCurrentTemplates() >= quota.getMaxTemplates()) {
+            throw new IllegalArgumentException(String.format(
+                "模板数量已达上限：当前 %d / 上限 %d",
+                quota.getCurrentTemplates(), quota.getMaxTemplates()
+            ));
+        }
+        if (fieldCount > quota.getMaxFieldsPerTemplate()) {
+            throw new IllegalArgumentException(String.format(
+                "单模板字段数超出上限：当前 %d / 上限 %d",
+                fieldCount, quota.getMaxFieldsPerTemplate()
+            ));
+        }
+    }
+
+    @Override
+    public void assertFormSubmissionQuota(Long tenantId) {
+        SysTenantQuota quota = quotaMapper.selectByTenantId(tenantId);
+        if (quota == null) {
+            throw new IllegalArgumentException("租户配额不存在");
+        }
+        if (quota.getCurrentFormSubmissions() >= quota.getMaxFormSubmissions()) {
+            throw new IllegalArgumentException(String.format(
+                "填报次数已达上限：当前 %d / 上限 %d",
+                quota.getCurrentFormSubmissions(), quota.getMaxFormSubmissions()
+            ));
+        }
+    }
+
+    @Override
+    public void assertWebhookRuleQuota(Long tenantId) {
+        SysTenantQuota quota = quotaMapper.selectByTenantId(tenantId);
+        if (quota == null) {
+            throw new IllegalArgumentException("租户配额不存在");
         }
     }
 }

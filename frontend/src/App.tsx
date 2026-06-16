@@ -1,5 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import TemplateList from './pages/TemplateList';
 import TemplateCreate from './pages/TemplateCreate';
 import TemplatePreview from './pages/TemplatePreview';
@@ -8,11 +10,36 @@ import FormDataDetail from './pages/FormDataDetail';
 import DataStatistics from './pages/DataStatistics';
 import WebhookRules from './pages/WebhookRules';
 import TenantManagement from './pages/TenantManagement';
+import { useTenantStore } from './store/tenantStore';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isLoggedIn = useTenantStore((s) => s.isLoggedIn());
+  const location = useLocation();
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return <>{children}</>;
+}
 
 export default function App() {
+  const initializeTenant = useTenantStore((s) => s.initializeTenant);
+
+  useEffect(() => {
+    initializeTenant();
+  }, []);
+
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="/templates" replace />} />
         <Route path="templates" element={<TemplateList />} />
         <Route path="templates/create" element={<TemplateCreate />} />

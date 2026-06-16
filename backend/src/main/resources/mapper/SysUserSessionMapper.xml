@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.SysUserSessionMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.SysUserSession">
+        <id column="id" property="id"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="user_id" property="userId"/>
+        <result column="login_ip" property="loginIp"/>
+        <result column="user_agent" property="userAgent"/>
+        <result column="expires_at" property="expiresAt"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectBySessionId" resultMap="BaseResultMap">
+        SELECT id, session_id, user_id, login_ip, user_agent, expires_at, created_at
+        FROM sys_user_session
+        WHERE session_id = #{sessionId} AND expires_at > CURRENT_TIMESTAMP
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT id, session_id, user_id, login_ip, user_agent, expires_at, created_at
+        FROM sys_user_session
+        WHERE user_id = #{userId} AND expires_at > CURRENT_TIMESTAMP
+        ORDER BY created_at DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user_session (session_id, user_id, login_ip, user_agent, expires_at, created_at)
+        VALUES (#{sessionId}, #{userId}, #{loginIp}, #{userAgent}, #{expiresAt}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <delete id="deleteBySessionId">
+        DELETE FROM sys_user_session WHERE session_id = #{sessionId}
+    </delete>
+
+    <delete id="deleteExpired">
+        DELETE FROM sys_user_session WHERE expires_at <![CDATA[ < ]]> #{now}
+    </delete>
+
+</mapper>

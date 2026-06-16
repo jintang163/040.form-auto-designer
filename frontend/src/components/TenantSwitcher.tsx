@@ -1,12 +1,17 @@
-import { useEffect } from 'react';
-import { Select, Tag, Space } from 'antd';
+import { useEffect, useState } from 'react';
+import { Select, Tag, Space, Dropdown, Typography, Divider } from 'antd';
 import {
   SwapOutlined,
   CrownOutlined,
   SafetyCertificateOutlined,
   UserOutlined,
+  LogoutOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useTenantStore } from '@/store/tenantStore';
+
+const { Text } = Typography;
 
 const roleIconMap: Record<string, React.ReactNode> = {
   SUPER_ADMIN: <CrownOutlined style={{ color: '#f5222d' }} />,
@@ -21,18 +26,69 @@ const roleLabelMap: Record<string, string> = {
 };
 
 export default function TenantSwitcher() {
-  const { tenants, currentTenantId, currentTenant, userRole, fetchTenants, setCurrentTenant, initializeTenant } =
-    useTenantStore();
+  const navigate = useNavigate();
+  const {
+    tenants,
+    currentTenantId,
+    currentTenant,
+    userRole,
+    userName,
+    userId,
+    fetchTenants,
+    setCurrentTenant,
+    logout,
+    isLoggedIn,
+  } = useTenantStore();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    initializeTenant();
-  }, []);
+    if (isLoggedIn() && tenants.length === 0) {
+      fetchTenants();
+    }
+  }, [isLoggedIn]);
 
   const handleChange = (value: number) => {
     setCurrentTenant(value);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   const roleTagColor = userRole === 'SUPER_ADMIN' ? 'red' : userRole === 'TENANT_ADMIN' ? 'orange' : 'blue';
+
+  const userMenuItems = [
+    {
+      key: 'profile',
+      icon: <SettingOutlined />,
+      label: (
+        <div>
+          <div style={{ fontWeight: 500 }}>{userName || userId}</div>
+          <div style={{ fontSize: 12, color: '#999' }}>{userId}</div>
+        </div>
+      ),
+      disabled: true,
+    },
+    {
+      type: 'divider' as const,
+    },
+    {
+      key: 'role',
+      icon: roleIconMap[userRole],
+      label: <span>角色：{roleLabelMap[userRole] || userRole}</span>,
+      disabled: true,
+    },
+    {
+      type: 'divider' as const,
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: <span style={{ color: '#f5222d' }}>退出登录</span>,
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <Space size="middle">
@@ -58,13 +114,23 @@ export default function TenantSwitcher() {
         }))}
       />
       {currentTenant && (
-        <Space size={4} style={{ fontSize: 12, color: '#888' }}>
-          <span>{currentTenant.tenantCode}</span>
-        </Space>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {currentTenant.tenantCode}
+        </Text>
       )}
-      <Tag icon={roleIconMap[userRole]} color={roleTagColor} style={{ margin: 0 }}>
-        {roleLabelMap[userRole] || userRole}
-      </Tag>
+      <Dropdown
+        menu={{ items: userMenuItems }}
+        placement="bottomRight"
+        open={dropdownOpen}
+        onOpenChange={setDropdownOpen}
+        trigger={['click']}
+      >
+        <Tag icon={roleIconMap[userRole]} color={roleTagColor} style={{ margin: 0, cursor: 'pointer' }}>
+          <Space size={4}>
+            <span>{userName || userId}</span>
+          </Space>
+        </Tag>
+      </Dropdown>
     </Space>
   );
 }

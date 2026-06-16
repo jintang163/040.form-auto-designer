@@ -257,3 +257,18 @@ export interface SysTenantUser {
   role: TenantUserRole;
   joinedAt: string;
 }
+
+export interface LoginRequest {
+  userId: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  userId: string;
+  userName: string;
+  role: TenantUserRole;
+  email?: string;
+  avatarUrl?: string;
+  tenants: SysTenantUser[];
+}

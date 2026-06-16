@@ -19,6 +19,7 @@ import type {
   SysTenant,
   SysTenantQuota,
   SysTenantUser,
+  LoginResponse,
 } from '@/types';
 
 const request = axios.create({
@@ -31,13 +32,9 @@ request.interceptors.request.use((config) => {
   if (tenantId) {
     config.headers['X-Tenant-Id'] = tenantId;
   }
-  const userRole = localStorage.getItem('currentUserRole');
-  if (userRole) {
-    config.headers['X-User-Role'] = userRole;
-  }
-  const userId = localStorage.getItem('currentUserId');
-  if (userId) {
-    config.headers['X-User-Id'] = userId;
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
   return config;
 });
@@ -444,4 +441,17 @@ export const tenantApi = {
 
   checkQuota: (tenantId: number, type: string) =>
     request.get<any, ApiResponse<boolean>>(`/tenants/${tenantId}/check-quota`, { params: { type } }).then(unwrap),
+};
+
+export const authApi = {
+  login: (userId: string, password: string) =>
+    request
+      .post<any, ApiResponse<LoginResponse>>('/auth/login', { userId, password })
+      .then(unwrap),
+
+  logout: () =>
+    request.post<any, ApiResponse<void>>('/auth/logout').then(unwrap),
+
+  validate: () =>
+    request.get<any, ApiResponse<boolean>>('/auth/validate').then(unwrap),
 };

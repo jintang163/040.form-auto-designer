@@ -152,6 +152,7 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
                 userStat.setSubmitterId(submitterId != null ? submitterId : GLOBAL_USER);
                 userStat.setLastUsedAt(now);
                 userStat.setUpdatedAt(now);
+                userStat.setTenantId(currentTenantId());
                 statsMapper.upsertIncrement(userStat);
 
                 FieldValueStats globalStat = new FieldValueStats();

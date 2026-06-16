@@ -2,9 +2,11 @@ package com.formdesigner.service.impl;
 
 import com.formdesigner.dto.FieldConfigDTO;
 import com.formdesigner.entity.FormField;
+import com.formdesigner.entity.SysTenantQuota;
 import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.common.TenantContext;
 import com.formdesigner.service.FormFieldService;
+import com.formdesigner.service.SysTenantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +17,28 @@ import java.util.List;
 public class FormFieldServiceImpl implements FormFieldService {
 
     private final FormFieldMapper formFieldMapper;
+    private final SysTenantService tenantService;
 
     private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
 
+    private void assertFieldQuota(Long templateId, int additionalFields) {
+        SysTenantQuota quota = tenantService.getQuotaByTenantId(currentTenantId());
+        if (quota == null) {
+            throw new IllegalArgumentException("租户配额不存在");
+        }
+        List<FormField> existingFields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
+        int currentCount = existingFields != null ? existingFields.size() : 0;
+        if (currentCount + additionalFields > quota.getMaxFieldsPerTemplate()) {
+            throw new IllegalArgumentException(String.format(
+                "单模板字段数已达上限：当前 %d / 上限 %d",
+                currentCount, quota.getMaxFieldsPerTemplate()
+            ));
+        }
+    }
+
     @Override
     public FormField createField(FieldConfigDTO dto) {
+        assertFieldQuota(dto.getTemplateId(), 1);
         FormField field = new FormField();
         field.setTemplateId(dto.getTemplateId());
         field.setFieldName(dto.getFieldName());

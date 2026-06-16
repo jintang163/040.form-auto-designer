@@ -5,6 +5,7 @@ import cn.hutool.http.HttpResponse;
 import com.formdesigner.entity.WebhookRule;
 import com.formdesigner.mapper.WebhookRuleMapper;
 import com.formdesigner.common.TenantContext;
+import com.formdesigner.service.SysTenantService;
 import com.formdesigner.service.WebhookRuleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import java.util.List;
 public class WebhookRuleServiceImpl implements WebhookRuleService {
 
     private final WebhookRuleMapper webhookRuleMapper;
+    private final SysTenantService tenantService;
 
     private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
 
@@ -27,6 +29,7 @@ public class WebhookRuleServiceImpl implements WebhookRuleService {
         rule.setEnabled(true);
         rule.setCreatedAt(LocalDateTime.now());
         rule.setUpdatedAt(LocalDateTime.now());
+        tenantService.assertWebhookRuleQuota(currentTenantId());
         rule.setTenantId(currentTenantId());
         webhookRuleMapper.insert(rule);
         return rule;

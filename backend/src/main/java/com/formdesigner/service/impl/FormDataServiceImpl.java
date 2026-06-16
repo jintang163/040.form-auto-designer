@@ -12,6 +12,7 @@ import com.formdesigner.mapper.FormTemplateMapper;
 import com.formdesigner.service.FormDataService;
 import com.formdesigner.service.DataStatisticsService;
 import com.formdesigner.service.SmartRecommendService;
+import com.formdesigner.service.SysTenantService;
 import com.formdesigner.service.WebhookRuleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,8 +56,10 @@ public class FormDataServiceImpl implements FormDataService {
         formData.setFieldValuesJson(dto.getFieldValuesJson());
         formData.setSubmitterId(dto.getSubmitterId());
         formData.setSubmittedAt(LocalDateTime.now());
+        tenantService.assertFormSubmissionQuota(currentTenantId());
         formData.setTenantId(currentTenantId());
         formDataMapper.insert(formData);
+        tenantService.incrementFormSubmissionCount(currentTenantId(), 1);
 
         dataStatisticsService.syncToClickHouse(formData);
 

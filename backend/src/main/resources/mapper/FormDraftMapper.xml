@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FormDraftMapper">
+
+    <resultMap id="FormDraftResultMap" type="com.formdesigner.entity.FormDraft">
+        <id column="id" property="id"/>
+        <result column="template_id" property="templateId"/>
+        <result column="field_values" property="fieldValues"/>
+        <result column="user_id" property="userId"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="saved_at" property="savedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FormDraft" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_draft (template_id, field_values, user_id, device_id, tenant_id, saved_at)
+        VALUES (#{templateId}, #{fieldValues}, #{userId}, #{deviceId}, #{tenantId}, #{savedAt})
+    </insert>
+
+    <select id="selectById" resultMap="FormDraftResultMap">
+        SELECT id, template_id, field_values, user_id, device_id, tenant_id, saved_at
+        FROM form_draft WHERE id = #{id} AND tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectByTemplateId" resultMap="FormDraftResultMap">
+        SELECT id, template_id, field_values, user_id, device_id, tenant_id, saved_at
+        FROM form_draft WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY saved_at DESC
+    </select>
+
+    <select id="selectByUserId" resultMap="FormDraftResultMap">
+        SELECT id, template_id, field_values, user_id, device_id, tenant_id, saved_at
+        FROM form_draft WHERE user_id = #{userId} AND tenant_id = #{tenantId} ORDER BY saved_at DESC
+    </select>
+
+    <select id="selectByUserIdAndTemplateId" resultMap="FormDraftResultMap">
+        SELECT id, template_id, field_values, user_id, device_id, tenant_id, saved_at
+        FROM form_draft WHERE user_id = #{userId} AND template_id = #{templateId} AND tenant_id = #{tenantId}
+        ORDER BY saved_at DESC LIMIT 1
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM form_draft WHERE id = #{id} AND tenant_id = #{tenantId}
+    </delete>
+
+    <delete id="deleteByUserIdAndTemplateId">
+        DELETE FROM form_draft WHERE user_id = #{userId} AND template_id = #{templateId} AND tenant_id = #{tenantId}
+    </delete>
+
+</mapper>

@@ -1,20 +1,24 @@
 import { create } from 'zustand';
-import { tenantApi } from '@/services/api';
-import type { SysTenant, SysTenantUser } from '@/types';
+import { tenantApi, authApi } from '@/services/api';
+import type { SysTenant, SysTenantUser, TenantUserRole, LoginResponse } from '@/types';
 
 interface TenantStore {
   tenants: SysTenant[];
   currentTenantId: number | null;
   currentTenant: SysTenant | null;
-  userRole: string;
+  userRole: TenantUserRole;
   userTenants: SysTenantUser[];
+  userId: string | null;
+  userName: string | null;
   loading: boolean;
 
   fetchTenants: () => Promise<void>;
   setCurrentTenant: (tenantId: number) => void;
   fetchUserTenants: () => Promise<void>;
   initializeTenant: () => void;
-  setUserContext: (userId: string, role: string) => void;
+  login: (userId: string, password: string) => Promise<LoginResponse>;
+  logout: () => Promise<void>;
+  isLoggedIn: () => boolean;
 }
 
 export const useTenantStore = create<TenantStore>((set, get) => ({
@@ -23,6 +27,8 @@ export const useTenantStore = create<TenantStore>((set, get) => ({
   currentTenant: null,
   userRole: 'USER',
   userTenants: [],
+  userId: null,
+  userName: null,
   loading: false,
 
   fetchTenants: async () => {
@@ -52,10 +58,18 @@ export const useTenantStore = create<TenantStore>((set, get) => ({
 
   initializeTenant: () => {
     const savedTenantId = localStorage.getItem('currentTenantId');
-    const savedRole = localStorage.getItem('currentUserRole');
+    const savedRole = localStorage.getItem('currentUserRole') as TenantUserRole;
+    const savedUserId = localStorage.getItem('currentUserId');
+    const savedUserName = localStorage.getItem('currentUserName');
 
     if (savedRole) {
       set({ userRole: savedRole });
+    }
+    if (savedUserId) {
+      set({ userId: savedUserId });
+    }
+    if (savedUserName) {
+      set({ userName: savedUserName });
     }
 
     if (savedTenantId) {
@@ -76,9 +90,46 @@ export const useTenantStore = create<TenantStore>((set, get) => ({
     }
   },
 
-  setUserContext: (userId: string, role: string) => {
-    localStorage.setItem('currentUserId', userId);
-    localStorage.setItem('currentUserRole', role);
-    set({ userRole: role });
+  login: async (userId: string, password: string) => {
+    const response = await authApi.login(userId, password);
+
+    localStorage.setItem('authToken', response.token);
+    localStorage.setItem('currentUserId', response.userId);
+    localStorage.setItem('currentUserName', response.userName);
+    localStorage.setItem('currentUserRole', response.role);
+
+    set({
+      userId: response.userId,
+      userName: response.userName,
+      userRole: response.role,
+      userTenants: response.tenants || [],
+    });
+
+    return response;
+  },
+
+  logout: async () => {
+    try {
+      await authApi.logout();
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUserId');
+      localStorage.removeItem('currentUserName');
+      localStorage.removeItem('currentUserRole');
+      localStorage.removeItem('currentTenantId');
+      set({
+        userId: null,
+        userName: null,
+        userRole: 'USER',
+        currentTenantId: null,
+        currentTenant: null,
+        userTenants: [],
+        tenants: [],
+      });
+    }
+  },
+
+  isLoggedIn: () => {
+    return !!localStorage.getItem('authToken');
   },
 }));

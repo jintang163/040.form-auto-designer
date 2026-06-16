@@ -35,4 +35,16 @@ public interface SysTenantService {
     List<SysTenantUser> getUserTenants(String userId);
 
     boolean checkQuota(Long tenantId, String quotaType);
+
+    void incrementTemplateCount(Long tenantId, int delta);
+
+    void incrementFormSubmissionCount(Long tenantId, int delta);
+
+    void incrementApiCallCount(Long tenantId);
+
+    void assertTemplateQuota(Long tenantId, int fieldCount);
+
+    void assertFormSubmissionQuota(Long tenantId);
+
+    void assertWebhookRuleQuota(Long tenantId);
 }
