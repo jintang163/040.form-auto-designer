@@ -18,7 +18,11 @@
           :errors="fieldErrors"
           :enable-voice="true"
           :voice-mock-mode="voiceMockMode"
+          :enable-smart-validation="true"
+          :template-id="templateId"
+          :submitter-id="submitterId"
           @field-change="onFieldChange"
+          @field-validated="onFieldValidated"
           @voice-fill="onVoiceFill"
           @voice-error="onVoiceError"
         />
@@ -82,11 +86,13 @@ import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { useFormStore } from '@/store/form'
 import { validateForm } from '@/utils/validator'
 import { saveDraft } from '@/utils/draftManager'
-import { submitFormData } from '@/api'
+import { submitFormData, validateForm as validateFormServer } from '@/api'
 import DynamicForm from '@/components/DynamicForm.vue'
 import FormPaginator from '@/components/FormPaginator.vue'
 import VoiceInput from '@/components/VoiceInput.vue'
 import type { ParsedVoiceResult } from '@/utils/voiceParser'
+import type { FieldValidationResult } from '@/types'
+import { getSubmitterId } from '@/utils/submitterId'
 
 const store = useFormStore()
 const loading = ref(false)
@@ -94,6 +100,7 @@ const currentPage = ref(0)
 const fieldErrors = ref<Record<string, string>>({})
 const dynamicFormRef = ref<InstanceType<typeof DynamicForm> | null>(null)
 const showVoiceTip = ref(true)
+const submitterId = ref(getSubmitterId())
 
 const voiceMockMode = false
 
@@ -164,6 +171,27 @@ function onFieldChange(key: string, value: any) {
   }
 }
 
+function onFieldValidated(key: string, result: FieldValidationResult) {
+  if (!result.valid && result.errors?.length > 0) {
+    const firstError = result.errors.find(e => e.severity === 2) || result.errors[0]
+    fieldErrors.value = {
+      ...fieldErrors.value,
+      [key]: firstError.errorMessage
+    }
+  } else if (fieldErrors.value[key]) {
+    const newErrors = { ...fieldErrors.value }
+    delete newErrors[key]
+    fieldErrors.value = newErrors
+  }
+
+  if (result.suggestions?.length > 0 && result.valid) {
+    const hasHighConfidence = result.suggestions.some(s => s.confidence >= 0.9)
+    if (hasHighConfidence) {
+      uni.vibrateShort({ type: 'light' })
+    }
+  }
+}
+
 function onVoiceFill(results: ParsedVoiceResult[]) {
   if (results.length > 0) {
     const fieldNames = results.map((r) => r.matchedField.title).join('、')
@@ -223,6 +251,52 @@ async function onSubmit() {
 
     uni.showToast({ title: '请完善表单信息', icon: 'none' })
     return
+  }
+
+  let hasServerErrors = false
+  try {
+    const serverValidation = await validateFormServer({
+      templateId: Number(templateId),
+      fieldValues: store.formData,
+      submitterId: submitterId.value,
+      enableSuggestions: false,
+      enableAutoCorrect: false,
+      partialValidation: false
+    })
+
+    if (serverValidation.data && !serverValidation.data.overallValid) {
+      hasServerErrors = true
+      const errMap: Record<string, string> = {}
+      for (const fieldResult of serverValidation.data.fieldResults) {
+        if (!fieldResult.valid && fieldResult.errors?.length) {
+          const criticalError = fieldResult.errors.find(e => e.severity === 2) || fieldResult.errors[0]
+          if (criticalError) {
+            errMap[fieldResult.fieldName] = criticalError.errorMessage
+          }
+        }
+      }
+
+      if (Object.keys(errMap).length > 0) {
+        fieldErrors.value = errMap
+
+        const errorPageIdx = mobileSchema.value.pages.findIndex((page) =>
+          page.fields.some((f) => errMap[f.key])
+        )
+        if (errorPageIdx >= 0) {
+          currentPage.value = errorPageIdx
+        }
+
+        uni.showModal({
+          title: '表单校验未通过',
+          content: `发现 ${Object.keys(errMap).length} 个字段需要修正，请检查后重新提交`,
+          showCancel: false,
+          confirmText: '我知道了'
+        })
+        return
+      }
+    }
+  } catch (e) {
+    console.debug('服务端校验异常，跳过继续提交:', e)
   }
 
   fieldErrors.value = {}

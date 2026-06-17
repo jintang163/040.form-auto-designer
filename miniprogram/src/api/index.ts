@@ -1,4 +1,15 @@
-import type { ApiResponse, FormTemplate, FormSchema, FormSubmitData, DraftData } from '@/types'
+import type {
+  ApiResponse,
+  FormTemplate,
+  FormSchema,
+  FormSubmitData,
+  DraftData,
+  FieldValidationResult,
+  FormValidationResult,
+  FieldValidateRequest,
+  FormValidateRequest,
+  ValidationRule
+} from '@/types'
 
 const BASE_URL = ''
 
@@ -118,5 +129,44 @@ export function speechToText(filePath: string) {
         reject(err)
       }
     })
+  })
+}
+
+export function validateField(params: FieldValidateRequest) {
+  return request<FieldValidationResult>({
+    url: '/api/validation/field',
+    method: 'POST',
+    data: params
+  })
+}
+
+export function validateForm(params: FormValidateRequest) {
+  return request<FormValidationResult>({
+    url: '/api/validation/form',
+    method: 'POST',
+    data: params
+  })
+}
+
+export function getBuiltinValidationRules() {
+  return request<ValidationRule[]>({
+    url: '/api/validation/rules/builtin',
+    method: 'GET'
+  })
+}
+
+export function getFieldValidationRules(templateId: number, fieldName: string) {
+  return request<ValidationRule[]>({
+    url: '/api/validation/rules/field',
+    method: 'GET',
+    data: { templateId, fieldName }
+  })
+}
+
+export function autoCorrectValue(templateId: number, fieldName: string, value: any) {
+  return request<{ correctedValue?: string }>({
+    url: `/api/validation/auto-correct?templateId=${templateId}&fieldName=${fieldName}`,
+    method: 'POST',
+    data: { value }
   })
 }
