@@ -11,6 +11,7 @@ import {
   Tooltip,
   Alert,
   Avatar,
+  Progress,
 } from 'antd';
 import {
   UserOutlined,
@@ -18,6 +19,8 @@ import {
   ShareAltOutlined,
   ReloadOutlined,
   ArrowLeftOutlined,
+  CheckCircleOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { shareApi, templateApi, fieldApi, formDataApi } from '@/services/api';
 import { generateFormSchema } from '@/utils/schemaTransform';
@@ -31,6 +34,7 @@ export default function CollaborationFill() {
   const { shareCode } = useParams<{ shareCode: string }>();
   const navigate = useNavigate();
   const schemaPreviewRef = useRef<SmartSchemaPreviewRef>(null);
+  const isInitializedRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(true);
@@ -41,6 +45,8 @@ export default function CollaborationFill() {
   const [fields, setFields] = useState<FormField[]>([]);
   const [schema, setSchema] = useState<FormSchema>({ type: 'object', properties: {} });
   const [submitted, setSubmitted] = useState(false);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [syncingFields, setSyncingFields] = useState<Set<string>>(new Set());
 
   const userName = useMemo(() => {
     const stored = localStorage.getItem('collabUserName');
@@ -53,7 +59,7 @@ export default function CollaborationFill() {
     connected,
     onlineUsers,
     fieldLocks,
-    fieldValues,
+    fieldValues: remoteFieldValues,
     sessionId,
     avatarColor,
     connect,
@@ -74,7 +80,10 @@ export default function CollaborationFill() {
   useEffect(() => {
     if (!shareCode) return;
     validateShare();
-  }, [shareCode]);
+    return () => {
+      disconnect();
+    };
+  }, [shareCode, disconnect]);
 
   const validateShare = async () => {
     setValidating(true);
@@ -149,6 +158,8 @@ export default function CollaborationFill() {
       } catch {
         setSchema(s);
       }
+
+      isInitializedRef.current = false;
     } catch (e: any) {
       message.error(e.message || '加载表单失败');
     } finally {
@@ -156,16 +167,63 @@ export default function CollaborationFill() {
     }
   };
 
+  useEffect(() => {
+    if (!connected || !schemaPreviewRef.current || isInitializedRef.current) return;
+
+    const timer = setTimeout(() => {
+      if (Object.keys(remoteFieldValues).length > 0 && !isInitializedRef.current) {
+        schemaPreviewRef.current?.setValues(remoteFieldValues);
+        setFormValues(remoteFieldValues);
+        isInitializedRef.current = true;
+        message.info('已同步协作填写进度');
+      }
+      requestSync();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [connected, remoteFieldValues, requestSync]);
+
+  useEffect(() => {
+    if (!schemaPreviewRef.current || !isInitializedRef.current) return;
+
+    const fieldsToUpdate: Record<string, any> = {};
+    const newSyncingFields = new Set<string>();
+
+    Object.entries(remoteFieldValues).forEach(([fieldName, value]) => {
+      const currentValue = formValues[fieldName];
+      const stringifiedCurrent = JSON.stringify(currentValue);
+      const stringifiedRemote = JSON.stringify(value);
+
+      if (stringifiedCurrent !== stringifiedRemote) {
+        fieldsToUpdate[fieldName] = value;
+        newSyncingFields.add(fieldName);
+      }
+    });
+
+    if (Object.keys(fieldsToUpdate).length > 0) {
+      Object.entries(fieldsToUpdate).forEach(([fieldName, value]) => {
+        schemaPreviewRef.current?.setFieldValue(fieldName, value);
+      });
+
+      setFormValues((prev) => ({ ...prev, ...fieldsToUpdate }));
+      setSyncingFields(newSyncingFields);
+
+      setTimeout(() => {
+        setSyncingFields(new Set());
+      }, 500);
+    }
+  }, [remoteFieldValues, formValues]);
+
   const handleFieldFocus = useCallback(
     (fieldName: string) => {
       const field = fields.find((f) => f.fieldName === fieldName);
       updateCursor(fieldName, field?.fieldLabel);
 
-      if (shareInfo?.allowEdit) {
+      if (shareInfo?.allowEdit && !isFieldLocked(fieldName)) {
         lockField(fieldName, field?.fieldLabel);
       }
     },
-    [fields, updateCursor, lockField, shareInfo?.allowEdit]
+    [fields, updateCursor, lockField, shareInfo?.allowEdit, isFieldLocked]
   );
 
   const handleFieldBlur = useCallback(
@@ -175,6 +233,16 @@ export default function CollaborationFill() {
       }
     },
     [unlockField, shareInfo?.allowEdit]
+  );
+
+  const handleFieldValueChange = useCallback(
+    (fieldName: string, value: any) => {
+      if (!shareInfo?.allowEdit) return;
+
+      setFormValues((prev) => ({ ...prev, [fieldName]: value }));
+      updateFieldValue(fieldName, value);
+    },
+    [shareInfo?.allowEdit, updateFieldValue]
   );
 
   const handleSubmit = async (values: Record<string, any>) => {
@@ -194,11 +262,19 @@ export default function CollaborationFill() {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
+  const progress = useMemo(() => {
+    const totalFields = fields.length;
+    if (totalFields === 0) return 0;
+    const filledFields = Object.values(formValues).filter(
+      (v) => v !== undefined && v !== null && v !== ''
+    ).length;
+    return Math.round((filledFields / totalFields) * 100);
+  }, [fields, formValues]);
+
+  const filledCount = useMemo(
+    () => Object.values(formValues).filter((v) => v !== undefined && v !== null && v !== '').length,
+    [formValues]
+  );
 
   if (validating || (loading && !passwordModalVisible)) {
     return (
@@ -224,7 +300,7 @@ export default function CollaborationFill() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', padding: '24px 16px' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1300, margin: '0 auto' }}>
         <div
           style={{
             background: '#fff',
@@ -247,7 +323,7 @@ export default function CollaborationFill() {
             </Button>
             <div>
               <h3 style={{ margin: 0 }}>{templateName}</h3>
-              <div style={{ marginTop: 4 }}>
+              <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center' }}>
                 <Tag color="green" icon={<ShareAltOutlined />}>
                   协作填写
                 </Tag>
@@ -259,22 +335,44 @@ export default function CollaborationFill() {
                     密码保护
                   </Tag>
                 )}
+                {syncingFields.size > 0 && (
+                  <Tag color="blue" icon={<EditOutlined />}>
+                    正在同步...
+                  </Tag>
+                )}
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Tooltip title={`用户: ${userName}`}>
-              <Avatar style={{ backgroundColor: avatarColor }} icon={<UserOutlined />} />
-            </Tooltip>
-            <span style={{ color: '#666', fontSize: 13 }}>
-              {onlineUsers.length} 人在线
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+              <span style={{ fontSize: 13, color: '#666' }}>
+                填写进度: <strong style={{ color: '#333' }}>{filledCount}</strong>/{fields.length}
+              </span>
+              <div style={{ width: 120 }}>
+                <Progress
+                  percent={progress}
+                  size="small"
+                  showInfo={false}
+                  strokeColor={{ from: '#1890ff', to: '#52c41a' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Tooltip title={`用户: ${userName}`}>
+                <Avatar style={{ backgroundColor: avatarColor }} icon={<UserOutlined />} />
+              </Tooltip>
+              <span style={{ color: '#666', fontSize: 13 }}>
+                {onlineUsers.length} 人在线
+              </span>
+            </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {submitted ? (
               <div
                 style={{
@@ -311,8 +409,14 @@ export default function CollaborationFill() {
                   templateId={shareInfo?.templateId}
                   onSubmit={handleSubmit}
                   onFieldFocus={handleFieldFocus}
-                  showValidation={false}
-                  showAddressComplete={false}
+                  onFieldBlur={handleFieldBlur}
+                  onFieldValueChange={handleFieldValueChange}
+                  showValidation={true}
+                  showAddressComplete={true}
+                  collaborationEnabled={true}
+                  onlineUsers={onlineUsers}
+                  fieldLocks={fieldLocks}
+                  currentSessionId={sessionId}
                 />
               </div>
             )}
@@ -344,7 +448,7 @@ export default function CollaborationFill() {
                       key={lock.fieldName}
                       style={{
                         padding: '6px 8px',
-                        background: '#fffbe6',
+                        background: lock.lockedBy === sessionId ? '#e6f7ff' : '#fffbe6',
                         borderRadius: 4,
                         fontSize: 12,
                         display: 'flex',
@@ -357,12 +461,12 @@ export default function CollaborationFill() {
                         style={{ backgroundColor: lock.avatarColor }}
                         icon={<UserOutlined />}
                       />
-                      <span style={{ flex: 1 }}>
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {lock.fieldLabel || lock.fieldName}
                       </span>
                       <Tooltip title={lock.lockedByName}>
-                        <Tag color="orange" style={{ margin: 0 }}>
-                          {lock.lockedByName}
+                        <Tag color={lock.lockedBy === sessionId ? 'blue' : 'orange'} style={{ margin: 0 }}>
+                          {lock.lockedBy === sessionId ? '我' : lock.lockedByName}
                         </Tag>
                       </Tooltip>
                     </div>
@@ -370,6 +474,65 @@ export default function CollaborationFill() {
                 </div>
               </div>
             )}
+
+            <div
+              style={{
+                marginTop: 16,
+                background: '#fff',
+                borderRadius: 8,
+                padding: 12,
+                border: '1px solid #f0f0f0',
+              }}
+            >
+              <div style={{ marginBottom: 12, fontWeight: 500 }}>
+                <CheckCircleOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+                填写进度
+              </div>
+              <Progress
+                type="circle"
+                percent={progress}
+                size={80}
+                style={{ display: 'block', margin: '0 auto 12px' }}
+              />
+              <div style={{ textAlign: 'center', fontSize: 12, color: '#666' }}>
+                已填写 <strong>{filledCount}</strong> / {fields.length} 个字段
+              </div>
+              {progress === 100 && (
+                <Tag color="success" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+                  填写完成，可以提交啦！
+                </Tag>
+              )}
+            </div>
+
+            <div
+              style={{
+                marginTop: 16,
+                background: '#e6f7ff',
+                borderRadius: 8,
+                padding: 12,
+                border: '1px solid #91d5ff',
+                fontSize: 12,
+                color: '#002766',
+              }}
+            >
+              <div style={{ fontWeight: 500, marginBottom: 8 }}>
+                💡 协作提示
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 16 }}>
+                <li style={{ marginBottom: 4 }}>
+                  可以看到其他协作者正在编辑的字段
+                </li>
+                <li style={{ marginBottom: 4 }}>
+                  字段被锁定时，他人无法编辑，避免冲突
+                </li>
+                <li style={{ marginBottom: 4 }}>
+                  填写内容实时同步，所有人都能看到进度
+                </li>
+                <li>
+                  失焦后字段会自动解锁，方便他人编辑
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

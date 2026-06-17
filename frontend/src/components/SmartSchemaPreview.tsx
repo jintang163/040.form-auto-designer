@@ -18,13 +18,14 @@ import {
   Upload,
   TextArea,
 } from '@formily/antd';
-import type { FormSchema, FormField } from '@/types';
+import type { FormSchema, FormField, CollaborationCursor as CollaborationCursorType, FieldLock } from '@/types';
 import { Card, Button, message } from 'antd';
 import type { Form } from '@formily/core';
 import { linkageApi, validationApi } from '@/services/api';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import SmartFieldWrapper from './SmartFieldWrapper';
 import AddressComplete from './AddressComplete';
+import CollaborationCursor from './CollaborationCursor';
 
 export interface SmartSchemaPreviewRef {
   setFieldValue: (fieldName: string, value: any) => void;
@@ -33,6 +34,7 @@ export interface SmartSchemaPreviewRef {
   getValues: () => Record<string, any>;
   setValues: (values: Record<string, any>) => void;
   validateForm: () => Promise<boolean>;
+  setFieldDisabled: (fieldName: string, disabled: boolean) => void;
 }
 
 interface SmartSchemaPreviewProps {
@@ -43,89 +45,20 @@ interface SmartSchemaPreviewProps {
   templateId?: string;
   onSubmit?: (values: Record<string, any>) => void;
   onFieldFocus?: (fieldName: string) => void;
+  onFieldBlur?: (fieldName: string) => void;
+  onFieldValueChange?: (fieldName: string, value: any) => void;
   showValidation?: boolean;
   showAddressComplete?: boolean;
+  collaborationEnabled?: boolean;
+  onlineUsers?: CollaborationCursorType[];
+  fieldLocks?: Record<string, FieldLock>;
+  currentSessionId?: string;
 }
 
 function isAddressField(fieldName: string, fieldLabel?: string): boolean {
   const lower = `${fieldName} ${fieldLabel || ''}`.toLowerCase();
   return lower.includes('address') || lower.includes('地址') || lower.includes('addr');
 }
-
-const SmartInput = forwardRef<
-  any,
-  any
->(({ value, onChange, fieldName, fieldLabel, templateId, ...rest }, ref) => {
-  const formRef = useRef<Form | null>(null);
-
-  const getFormValues = useCallback((): Record<string, any> => {
-    return formRef.current?.values || {};
-  }, []);
-
-  const handleChange = useCallback(
-    (val: any) => {
-      onChange?.(val);
-    },
-    [onChange]
-  );
-
-  const WrappedComponent = isAddressField(fieldName, fieldLabel) ? (
-    <AddressComplete value={value} onChange={onChange} />
-  ) : (
-    <Input ref={ref} value={value} onChange={onChange} {...rest} />
-  );
-
-  return (
-    <SmartFieldWrapper
-      fieldName={fieldName}
-      fieldLabel={fieldLabel}
-      templateId={templateId || ''}
-      submitterId={getOrCreateSubmitterId()}
-      value={value}
-      allValues={getFormValues()}
-      isAddressField={isAddressField(fieldName, fieldLabel)}
-      onValueChange={handleChange}
-    >
-      {WrappedComponent}
-    </SmartFieldWrapper>
-  );
-});
-
-SmartInput.displayName = 'SmartInput';
-
-const SmartTextArea = forwardRef<
-  any,
-  any
->(({ value, onChange, fieldName, fieldLabel, templateId, ...rest }, ref) => {
-  const formRef = useRef<Form | null>(null);
-
-  const getFormValues = useCallback((): Record<string, any> => {
-    return formRef.current?.values || {};
-  }, []);
-
-  const handleChange = useCallback(
-    (val: any) => {
-      onChange?.(val);
-    },
-    [onChange]
-  );
-
-  return (
-    <SmartFieldWrapper
-      fieldName={fieldName}
-      fieldLabel={fieldLabel}
-      templateId={templateId || ''}
-      submitterId={getOrCreateSubmitterId()}
-      value={value}
-      allValues={getFormValues()}
-      onValueChange={handleChange}
-    >
-      <TextArea ref={ref} value={value} onChange={onChange} {...rest} />
-    </SmartFieldWrapper>
-  );
-});
-
-SmartTextArea.displayName = 'SmartTextArea';
 
 const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewProps>(
   (
@@ -137,12 +70,19 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       templateId,
       onSubmit,
       onFieldFocus,
+      onFieldBlur,
+      onFieldValueChange,
       showValidation = true,
       showAddressComplete = true,
+      collaborationEnabled = false,
+      onlineUsers = [],
+      fieldLocks = {},
+      currentSessionId = '',
     },
     ref
   ) => {
     const formRef = useRef<Form | null>(null);
+    const [externallyDisabledFields, setExternallyDisabledFields] = useState<Set<string>>(new Set());
 
     const form = useMemo(() => {
       const f = createForm({
@@ -168,6 +108,23 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       });
       return map;
     }, [fields]);
+
+    const isFieldLockedByOther = useCallback(
+      (fieldName: string): boolean => {
+        if (!collaborationEnabled) return false;
+        const lock = fieldLocks[fieldName];
+        return !!lock && lock.lockedBy !== currentSessionId;
+      },
+      [collaborationEnabled, fieldLocks, currentSessionId]
+    );
+
+    const getFieldLock = useCallback(
+      (fieldName: string): FieldLock | null => {
+        if (!collaborationEnabled) return null;
+        return fieldLocks[fieldName] || null;
+      },
+      [collaborationEnabled, fieldLocks]
+    );
 
     const applyLinkageResults = useCallback(
       (results: any[]) => {
@@ -211,30 +168,50 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
     }, [templateId, form.values, applyLinkageResults]);
 
     useEffect(() => {
-      if (!onFieldFocus) return;
+      if (!onFieldFocus && !onFieldBlur) return;
       const disposers: (() => void)[] = [];
       Object.keys(schema.properties || {}).forEach((fieldName) => {
         try {
           const field = form.query(fieldName).take();
           if (field) {
-            const disp = field.addEffects?.('__recommend_focus__', (fieldSelf: any) => {
-              fieldSelf.onFieldFocus?.(() => {
+            if (onFieldFocus) {
+              const dispFocus = field.addEffects?.('__collab_focus__', (fieldSelf: any) => {
+                fieldSelf.onFieldFocus?.(() => {
+                  onFieldFocus(fieldName);
+                });
+              });
+              if (typeof dispFocus === 'function') disposers.push(dispFocus);
+            }
+            if (onFieldBlur) {
+              const dispBlur = field.addEffects?.('__collab_blur__', (fieldSelf: any) => {
+                fieldSelf.onFieldBlur?.(() => {
+                  onFieldBlur(fieldName);
+                });
+              });
+              if (typeof dispBlur === 'function') disposers.push(dispBlur);
+            }
+          }
+        } catch {
+          if (onFieldFocus) {
+            const dispFocus = form.addEffects?.(`__collab_focus_${fieldName}__`, () => {
+              form.onFieldFocus?.(`${fieldName}`, () => {
                 onFieldFocus(fieldName);
               });
             });
-            if (typeof disp === 'function') disposers.push(disp);
+            if (typeof dispFocus === 'function') disposers.push(dispFocus);
           }
-        } catch {
-          const disp = form.addEffects?.(`__focus_${fieldName}__`, () => {
-            form.onFieldFocus?.(`${fieldName}`, () => {
-              onFieldFocus(fieldName);
+          if (onFieldBlur) {
+            const dispBlur = form.addEffects?.(`__collab_blur_${fieldName}__`, () => {
+              form.onFieldBlur?.(`${fieldName}`, () => {
+                onFieldBlur(fieldName);
+              });
             });
-          });
-          if (typeof disp === 'function') disposers.push(disp);
+            if (typeof dispBlur === 'function') disposers.push(dispBlur);
+          }
         }
       });
       return () => disposers.forEach((d) => d && d());
-    }, [form, schema, onFieldFocus]);
+    }, [form, schema, onFieldFocus, onFieldBlur]);
 
     const validateForm = useCallback(async (): Promise<boolean> => {
       if (!templateId) return true;
@@ -300,8 +277,25 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       getFieldValue: (fieldName: string) => form.getValuesIn?.(fieldName),
       getForm: () => form,
       getValues: () => form.values,
-      setValues: (vals: Record<string, any>) => form.setInitialValues(vals),
+      setValues: (vals: Record<string, any>) => {
+        Object.entries(vals).forEach(([key, val]) => {
+          try {
+            form.setValuesIn(key, val);
+          } catch {}
+        });
+      },
       validateForm,
+      setFieldDisabled: (fieldName: string, disabled: boolean) => {
+        setExternallyDisabledFields((prev) => {
+          const next = new Set(prev);
+          if (disabled) {
+            next.add(fieldName);
+          } else {
+            next.delete(fieldName);
+          }
+          return next;
+        });
+      },
     }));
 
     const handleSubmit = useCallback(async () => {
@@ -311,6 +305,13 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       }
       onSubmit?.(form.values);
     }, [onSubmit, showValidation, validateForm, form.values]);
+
+    const handleFieldValueChange = useCallback(
+      (fieldName: string, value: any) => {
+        onFieldValueChange?.(fieldName, value);
+      },
+      [onFieldValueChange]
+    );
 
     const SchemaFieldComponents = useMemo(() => {
       if (!showValidation || !templateId) {
@@ -372,7 +373,11 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
           if (requiredFields.has(key)) {
             p.required = true;
           }
-          if (disabledFields.has(key)) {
+          const isDisabled =
+            disabledFields.has(key) ||
+            externallyDisabledFields.has(key) ||
+            isFieldLockedByOther(key);
+          if (isDisabled) {
             p['x-component-props'] = { ...(p['x-component-props'] || {}), disabled: true };
           }
 
@@ -388,6 +393,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
                 fieldName: key,
                 fieldLabel: field?.fieldLabel,
                 templateId,
+                disabled: isDisabled,
               };
             } else {
               p['x-decorator'] = 'SmartFieldDecorator';
@@ -397,6 +403,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
                 fieldName: key,
                 fieldLabel: field?.fieldLabel,
                 templateId,
+                disabled: isDisabled,
               };
             }
           }
@@ -405,7 +412,19 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
         }
       }
       return { type: 'object' as const, properties: props };
-    }, [schema, hiddenFields, dynamicOptionsMap, requiredFields, disabledFields, showValidation, templateId, fieldMap, showAddressComplete]);
+    }, [
+      schema,
+      hiddenFields,
+      dynamicOptionsMap,
+      requiredFields,
+      disabledFields,
+      externallyDisabledFields,
+      showValidation,
+      templateId,
+      fieldMap,
+      showAddressComplete,
+      isFieldLockedByOther,
+    ]);
 
     const schemaJson = useMemo(
       () => ({
@@ -423,13 +442,34 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       const submitterId = getOrCreateSubmitterId();
 
       const SmartFieldDecorator: React.FC<any> = ({ children, ...props }) => {
-        return <FormItem {...props}>{children}</FormItem>;
+        const fieldName = props['data-field-name'] || '';
+        const field = fieldMap[fieldName];
+
+        return (
+          <div data-field-wrapper={fieldName}>
+            <FormItem {...props}>
+              {children}
+            </FormItem>
+            {collaborationEnabled && (
+              <div style={{ paddingLeft: 112 }}>
+                <CollaborationCursor
+                  fieldName={fieldName}
+                  fieldLabel={field?.fieldLabel}
+                  cursors={onlineUsers}
+                  currentSessionId={currentSessionId}
+                  fieldLock={getFieldLock(fieldName)}
+                />
+              </div>
+            )}
+          </div>
+        );
       };
 
       const SmartInputComponent: React.FC<any> = (props) => {
         const fieldName = props.fieldName;
         const fieldLabel = props.fieldLabel;
         const [fieldValue, setFieldValue] = useState(props.value);
+        const isLocked = isFieldLockedByOther(fieldName);
 
         useEffect(() => {
           setFieldValue(props.value);
@@ -439,9 +479,18 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
           const val = e?.target?.value !== undefined ? e.target.value : e;
           setFieldValue(val);
           props.onChange?.(e);
+          handleFieldValueChange(fieldName, val);
         };
 
         const getFormValues = () => form.values || {};
+
+        const handleFocus = () => {
+          onFieldFocus?.(fieldName);
+        };
+
+        const handleBlur = () => {
+          onFieldBlur?.(fieldName);
+        };
 
         return (
           <SmartFieldWrapper
@@ -453,9 +502,23 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
             allValues={getFormValues()}
             onValueChange={(val) => {
               props.onChange?.(val);
+              handleFieldValueChange(fieldName, val);
+            }}
+            fieldProps={{
+              'data-field-name': fieldName,
+            }}
+            decoratorProps={{
+              'data-field-name': fieldName,
             }}
           >
-            <Input {...props} value={fieldValue} onChange={handleChange} />
+            <Input
+              {...props}
+              value={fieldValue}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              disabled={isLocked || props.disabled}
+            />
           </SmartFieldWrapper>
         );
       };
@@ -464,6 +527,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
         const fieldName = props.fieldName;
         const fieldLabel = props.fieldLabel;
         const [fieldValue, setFieldValue] = useState(props.value);
+        const isLocked = isFieldLockedByOther(fieldName);
 
         useEffect(() => {
           setFieldValue(props.value);
@@ -472,9 +536,18 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
         const handleChange = (val: any) => {
           setFieldValue(val);
           props.onChange?.(val);
+          handleFieldValueChange(fieldName, val);
         };
 
         const getFormValues = () => form.values || {};
+
+        const handleFocus = () => {
+          onFieldFocus?.(fieldName);
+        };
+
+        const handleBlur = () => {
+          onFieldBlur?.(fieldName);
+        };
 
         return (
           <SmartFieldWrapper
@@ -487,11 +560,20 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
             isAddressField
             onValueChange={(val) => {
               props.onChange?.(val);
+              handleFieldValueChange(fieldName, val);
+            }}
+            fieldProps={{
+              'data-field-name': fieldName,
+            }}
+            decoratorProps={{
+              'data-field-name': fieldName,
             }}
           >
             <AddressComplete
               value={fieldValue}
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder={props.placeholder}
             />
           </SmartFieldWrapper>
@@ -504,7 +586,21 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
         SmartInput: SmartInputComponent,
         SmartAddressInput: SmartAddressInputComponent,
       };
-    }, [SchemaFieldComponents, showValidation, templateId, form.values]);
+    }, [
+      SchemaFieldComponents,
+      showValidation,
+      templateId,
+      form.values,
+      fieldMap,
+      collaborationEnabled,
+      onlineUsers,
+      currentSessionId,
+      getFieldLock,
+      isFieldLockedByOther,
+      onFieldFocus,
+      onFieldBlur,
+      handleFieldValueChange,
+    ]);
 
     return (
       <Card title="表单预览" size="small">
