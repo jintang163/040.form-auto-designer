@@ -24,6 +24,12 @@ import type {
   OcrDocType,
   LinkageRule,
   LinkageEvaluateResult,
+  FieldValidationResult,
+  FormValidationResult,
+  FieldValidateRequest,
+  FormValidateRequest,
+  ContextRecommendation,
+  AddressSuggestion,
 } from '@/types';
 
 const request = axios.create({
@@ -273,6 +279,52 @@ export const recommendApi = {
 
   rebuildStats: (templateId: string) =>
     request.post<any, ApiResponse<void>>(`/smart-recommend/rebuild/${templateId}`).then(unwrap),
+};
+
+export const validationApi = {
+  validateField: (data: FieldValidateRequest) =>
+    request.post<any, ApiResponse<FieldValidationResult>>('/validation/field', data).then(unwrap),
+
+  validateForm: (data: FormValidateRequest) =>
+    request.post<any, ApiResponse<FormValidationResult>>('/validation/form', data).then(unwrap),
+
+  getBuiltinRules: () =>
+    request.get<any, ApiResponse<any[]>>('/validation/rules/builtin').then(unwrap),
+
+  getFieldRules: (templateId: string, fieldName: string) =>
+    request.get<any, ApiResponse<any[]>>('/validation/rules/field', {
+      params: { templateId, fieldName },
+    }).then(unwrap),
+
+  autoCorrectValue: (templateId: string, fieldName: string, value: any) =>
+    request.post<any, ApiResponse<{ correctedValue?: string }>>(
+      `/validation/auto-correct?templateId=${templateId}&fieldName=${fieldName}`,
+      { value }
+    ).then(unwrap),
+};
+
+export const aiRecommendApi = {
+  getContextRecommendations: (data: {
+    filledFields: Record<string, any>;
+    fieldDefinitions?: { fieldName: string; fieldLabel?: string; inputType?: string }[];
+    targetFields?: string[];
+    excludeFields?: string[];
+  }) =>
+    request.post<any, ApiResponse<ContextRecommendation[]>>(
+      'http://localhost:5000/api/recommend/context',
+      data
+    ).then(unwrap),
+
+  completeAddress: (data: {
+    partialAddress: string;
+    province?: string;
+    city?: string;
+    limit?: number;
+  }) =>
+    request.post<any, ApiResponse<{ suggestions: AddressSuggestion[] }>>(
+      'http://localhost:5000/api/recommend/address/complete',
+      data
+    ).then(unwrap),
 };
 
 export const webhookApi = {

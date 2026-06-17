@@ -244,9 +244,11 @@ function onFieldChange(key: string, value: any) {
   }
 
   const field = visibleFields.value.find((f) => f.key === key)
+  let hasLocalError = false
   if (field?.validation) {
     const localError = validateFieldLocal(key, value, field.validation)
     if (localError) {
+      hasLocalError = true
       serverValidationResults.value[key] = {
         fieldName: key,
         valid: false,
@@ -258,18 +260,17 @@ function onFieldChange(key: string, value: any) {
         }] as ServerValidationError[],
         suggestions: []
       }
-      return
     }
   }
 
   if (props.enableSmartValidation && props.templateId) {
     debounceTimers.value[key] = setTimeout(() => {
-      runServerValidation(key, value)
+      runServerValidation(key, value, hasLocalError)
     }, 500)
   }
 }
 
-async function runServerValidation(key: string, value: any) {
+async function runServerValidation(key: string, value: any, hasLocalError = false) {
   if (!props.templateId) return
 
   validatingFields.value[key] = true
@@ -285,10 +286,28 @@ async function runServerValidation(key: string, value: any) {
     })
 
     if (res.data) {
-      serverValidationResults.value[key] = res.data
-      emit('fieldValidated', key, res.data)
+      let finalResult = res.data
 
-      if (res.data.autoCorrectedValue && res.data.autoCorrectedValue !== String(value ?? '')) {
+      if (hasLocalError && serverValidationResults.value[key]?.errors?.length) {
+        const localErrors = serverValidationResults.value[key].errors
+        const serverErrors = res.data.errors || []
+        const mergedErrors = [...localErrors]
+        for (const err of serverErrors) {
+          if (!mergedErrors.some(e => e.errorCode === err.errorCode)) {
+            mergedErrors.push(err)
+          }
+        }
+        finalResult = {
+          ...res.data,
+          valid: false,
+          errors: mergedErrors
+        }
+      }
+
+      serverValidationResults.value[key] = finalResult
+      emit('fieldValidated', key, finalResult)
+
+      if (finalResult.autoCorrectedValue && finalResult.autoCorrectedValue !== String(value ?? '')) {
         uni.vibrateShort({ type: 'light' })
       }
     }
@@ -302,9 +321,11 @@ async function runServerValidation(key: string, value: any) {
 function onFieldBlur(key: string) {
   blurredFields.value[key] = true
   const value = formValues.value[key]
+  const field = visibleFields.value.find((f) => f.key === key)
+  const hasLocalError = !!(field?.validation && validateFieldLocal(key, value, field.validation))
 
-  if (!serverValidationResults.value[key] && props.enableSmartValidation && props.templateId) {
-    runServerValidation(key, value)
+  if (props.enableSmartValidation && props.templateId) {
+    runServerValidation(key, value, hasLocalError)
   }
 }
 

@@ -1,12 +1,31 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Spin, message, Tooltip, Tag, Space } from 'antd';
-import { BulbOutlined, ReloadOutlined, UserOutlined } from '@ant-design/icons';
-import { templateApi, formDataApi, fieldApi, recommendApi } from '@/services/api';
+import { Button, Spin, message, Tooltip, Tag, Space, Alert } from 'antd';
+import {
+  BulbOutlined,
+  ReloadOutlined,
+  UserOutlined,
+  ThunderboltOutlined,
+  SafetyOutlined,
+  EnvironmentOutlined,
+} from '@ant-design/icons';
+import {
+  templateApi,
+  formDataApi,
+  fieldApi,
+  recommendApi,
+  aiRecommendApi,
+  validationApi,
+} from '@/services/api';
 import { generateFormSchema } from '@/utils/schemaTransform';
-import SchemaPreview, { type SchemaPreviewRef } from '@/components/SchemaPreview';
+import SmartSchemaPreview, { type SmartSchemaPreviewRef } from '@/components/SmartSchemaPreview';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
-import type { FormField, FormSchema, FieldRecommendation } from '@/types';
+import type {
+  FormField,
+  FormSchema,
+  FieldRecommendation,
+  ContextRecommendation,
+} from '@/types';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
   USER_HISTORY: { label: '历史', color: 'blue' },
@@ -14,10 +33,20 @@ const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
   GLOBAL: { label: '热门', color: 'orange' },
 };
 
+const AI_SOURCE_LABELS: Record<string, { label: string; color: string }> = {
+  ID_CARD_PARSE: { label: '身份证解析', color: 'purple' },
+  PHONE_PREFIX: { label: '手机号分析', color: 'cyan' },
+  NAME_PATTERN: { label: '姓名分析', color: 'magenta' },
+  COMPANY_KEYWORD: { label: '公司识别', color: 'geekblue' },
+  PROVINCE_CAPITAL: { label: '省份关联', color: 'lime' },
+  EMAIL_PREFIX: { label: '邮箱分析', color: 'volcano' },
+  ADDRESS_ZIPCODE: { label: '地址解析', color: 'gold' },
+};
+
 export default function TemplatePreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const schemaPreviewRef = useRef<SchemaPreviewRef>(null);
+  const schemaPreviewRef = useRef<SmartSchemaPreviewRef>(null);
   const [schema, setSchema] = useState<FormSchema>({ type: 'object', properties: {} });
   const [loading, setLoading] = useState(true);
   const [templateName, setTemplateName] = useState('');
@@ -27,6 +56,14 @@ export default function TemplatePreview() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const submitterId = useRef<string>(getOrCreateSubmitterId());
 
+  const formValuesRef = useRef<Record<string, any>>({});
+  const [contextRecommendations, setContextRecommendations] = useState<ContextRecommendation[]>([]);
+  const [contextRecLoading, setContextRecLoading] = useState(false);
+  const [enableSmartValidation, setEnableSmartValidation] = useState(true);
+  const [enableAddressComplete, setEnableAddressComplete] = useState(true);
+
+  const fieldMapRef = useRef<Record<string, FormField>>({});
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -34,6 +71,11 @@ export default function TemplatePreview() {
       .then(([template, fs]) => {
         setTemplateName(template.name);
         setFields(fs);
+        const map: Record<string, FormField> = {};
+        fs.forEach((f) => {
+          map[f.fieldName] = f;
+        });
+        fieldMapRef.current = map;
         const s = generateFormSchema(fs.map((f) => ({ ...f })));
         try {
           const saved = JSON.parse(template.schemaJson);
@@ -68,58 +110,191 @@ export default function TemplatePreview() {
       .finally(() => setRecommendLoading(false));
   }, [id]);
 
+  const loadContextRecommendations = useCallback(async () => {
+    if (!id) return;
+
+    const values = formValuesRef.current || {};
+    const filledCount = Object.values(values).filter(
+      (v) => v !== undefined && v !== null && v !== ''
+    ).length;
+
+    if (filledCount < 1) {
+      setContextRecommendations([]);
+      return;
+    }
+
+    setContextRecLoading(true);
+    try {
+      const fieldDefs = fields.map((f) => ({
+        fieldName: f.fieldName,
+        fieldLabel: f.fieldLabel,
+        inputType: f.inputType,
+      }));
+
+      const recs = await aiRecommendApi.getContextRecommendations({
+        filledFields: values,
+        fieldDefinitions: fieldDefs,
+      });
+
+      const filtered = recs.filter(
+        (r) =>
+          formValuesRef.current?.[r.targetField] === undefined ||
+          formValuesRef.current?.[r.targetField] === ''
+      );
+
+      setContextRecommendations(filtered);
+
+      if (filtered.length > 0) {
+        message.info(
+          `发现 ${filtered.length} 条上下文推荐，填写身份证、手机号等字段后自动推断性别、生日、运营商等信息`,
+          2
+        );
+      }
+    } catch (e) {
+      console.warn('加载上下文推荐失败:', e);
+      setContextRecommendations([]);
+    } finally {
+      setContextRecLoading(false);
+    }
+  }, [id, fields]);
+
   useEffect(() => {
     if (fields.length > 0 && id) {
       loadRecommendations();
     }
   }, [fields.length, id, loadRecommendations]);
 
-  const applyRecommendation = useCallback((fieldName: string, value: string) => {
-    if (schemaPreviewRef.current) {
-      const field = fields.find((f) => f.fieldName === fieldName);
-      let typedValue: any = value;
-      if (field?.inputType === 'number') {
-        const num = Number(value);
-        if (!Number.isNaN(num)) {
-          typedValue = num;
-        }
-      }
-      schemaPreviewRef.current.setFieldValue(fieldName, typedValue);
-      message.success(`已填入 ${field?.fieldLabel || fieldName}: ${value}`);
-    } else {
-      message.info(`已选择推荐值: ${value}`);
-    }
-  }, [fields]);
-
-  const handleSubmit = async (values: Record<string, any>) => {
-    if (!id) return;
-    try {
-      await formDataApi.submitFormData(id, values, submitterId.current);
-      message.success('提交成功');
-      loadRecommendations();
-    } catch (e: any) {
-      message.error(e.message);
-    }
-  };
-
-  const handleFieldFocus = useCallback((fieldName: string) => {
-    setFocusedField(fieldName);
-    const rec = recommendations[fieldName];
-    if (rec && schemaPreviewRef.current) {
-      const currentVal = schemaPreviewRef.current.getFieldValue(fieldName);
-      if (currentVal == null || currentVal === '') {
+  const applyRecommendation = useCallback(
+    (fieldName: string, value: string) => {
+      if (schemaPreviewRef.current) {
         const field = fields.find((f) => f.fieldName === fieldName);
-        let typedValue: any = rec.recommendedValue;
+        let typedValue: any = value;
         if (field?.inputType === 'number') {
-          const num = Number(rec.recommendedValue);
+          const num = Number(value);
           if (!Number.isNaN(num)) {
             typedValue = num;
           }
         }
         schemaPreviewRef.current.setFieldValue(fieldName, typedValue);
+        message.success(`已填入 ${field?.fieldLabel || fieldName}: ${value}`);
+
+        formValuesRef.current = {
+          ...formValuesRef.current,
+          [fieldName]: typedValue,
+        };
+      } else {
+        message.info(`已选择推荐值: ${value}`);
+      }
+    },
+    [fields]
+  );
+
+  const applyContextRecommendation = useCallback(
+    (rec: ContextRecommendation) => {
+      applyRecommendation(rec.targetField, String(rec.suggestedValue));
+      setTimeout(() => {
+        loadContextRecommendations();
+      }, 500);
+    },
+    [applyRecommendation, loadContextRecommendations]
+  );
+
+  const applyAllContextRecommendations = useCallback(() => {
+    if (!schemaPreviewRef.current || contextRecommendations.length === 0) return;
+
+    for (const rec of contextRecommendations) {
+      const field = fields.find((f) => f.fieldName === rec.targetField);
+      let typedValue: any = rec.suggestedValue;
+      if (field?.inputType === 'number') {
+        const num = Number(rec.suggestedValue);
+        if (!Number.isNaN(num)) {
+          typedValue = num;
+        }
+      }
+      schemaPreviewRef.current.setFieldValue(rec.targetField, typedValue);
+      formValuesRef.current = {
+        ...formValuesRef.current,
+        [rec.targetField]: typedValue,
+      };
+    }
+
+    message.success(`已自动填入 ${contextRecommendations.length} 个字段`, 2);
+    setContextRecommendations([]);
+  }, [contextRecommendations, fields]);
+
+  const handleSubmit = async (values: Record<string, any>) => {
+    if (!id) return;
+
+    formValuesRef.current = values;
+
+    if (enableSmartValidation) {
+      try {
+        const valid = await schemaPreviewRef.current?.validateForm();
+        if (!valid) return;
+      } catch (e) {
+        console.warn('校验失败:', e);
       }
     }
-  }, [recommendations, fields]);
+
+    try {
+      await formDataApi.submitFormData(id, values, submitterId.current);
+      message.success('提交成功');
+      loadRecommendations();
+      formValuesRef.current = {};
+    } catch (e: any) {
+      message.error(e.message);
+    }
+  };
+
+  const handleFieldFocus = useCallback(
+    (fieldName: string) => {
+      setFocusedField(fieldName);
+      const rec = recommendations[fieldName];
+      if (rec && schemaPreviewRef.current) {
+        const currentVal = schemaPreviewRef.current.getFieldValue(fieldName);
+        if (currentVal == null || currentVal === '') {
+          const field = fields.find((f) => f.fieldName === fieldName);
+          let typedValue: any = rec.recommendedValue;
+          if (field?.inputType === 'number') {
+            const num = Number(rec.recommendedValue);
+            if (!Number.isNaN(num)) {
+              typedValue = num;
+            }
+          }
+          schemaPreviewRef.current.setFieldValue(fieldName, typedValue);
+          formValuesRef.current = {
+            ...formValuesRef.current,
+            [fieldName]: typedValue,
+          };
+        }
+      }
+    },
+    [recommendations, fields]
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (schemaPreviewRef.current) {
+        const vals = schemaPreviewRef.current.getValues();
+        if (vals && Object.keys(vals).length > 0) {
+          const changed =
+            JSON.stringify(vals) !== JSON.stringify(formValuesRef.current || {});
+          if (changed) {
+            formValuesRef.current = vals;
+          }
+        }
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const filledCount = useMemo(
+    () =>
+      Object.values(formValuesRef.current || {}).filter(
+        (v) => v !== undefined && v !== null && v !== ''
+      ).length,
+    [formValuesRef.current]
+  );
 
   if (loading) return <Spin />;
 
@@ -133,6 +308,8 @@ export default function TemplatePreview() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
         }}
       >
         <h3 style={{ margin: 0 }}>{templateName} - 表单预览</h3>
@@ -141,6 +318,34 @@ export default function TemplatePreview() {
             <Tag icon={<UserOutlined />}>
               用户: {submitterId.current.slice(0, 8)}...
             </Tag>
+          </Tooltip>
+          <Tooltip title="是否启用智能校验">
+            <Button
+              type={enableSmartValidation ? 'primary' : 'default'}
+              icon={<SafetyOutlined />}
+              onClick={() => setEnableSmartValidation(!enableSmartValidation)}
+            >
+              智能校验: {enableSmartValidation ? '开' : '关'}
+            </Button>
+          </Tooltip>
+          <Tooltip title="是否启用地址补全">
+            <Button
+              type={enableAddressComplete ? 'primary' : 'default'}
+              icon={<EnvironmentOutlined />}
+              onClick={() => setEnableAddressComplete(!enableAddressComplete)}
+            >
+              地址补全: {enableAddressComplete ? '开' : '关'}
+            </Button>
+          </Tooltip>
+          <Tooltip title="根据已填字段获取AI上下文推荐">
+            <Button
+              icon={<ThunderboltOutlined />}
+              loading={contextRecLoading}
+              onClick={loadContextRecommendations}
+              disabled={filledCount < 1}
+            >
+              AI 关联推荐
+            </Button>
           </Tooltip>
           <Tooltip title="刷新智能推荐">
             <Button
@@ -154,6 +359,101 @@ export default function TemplatePreview() {
           <Button onClick={() => navigate(-1)}>返回</Button>
         </Space>
       </div>
+
+      {contextRecommendations.length > 0 && (
+        <Alert
+          type="info"
+          showIcon
+          icon={<BulbOutlined />}
+          style={{ marginBottom: 16 }}
+          message={
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <strong style={{ marginRight: 12 }}>
+                    <ThunderboltOutlined style={{ marginRight: 4 }} />
+                    基于已填字段的AI关联推荐
+                    <Tag color="blue" style={{ marginLeft: 8 }}>
+                      {contextRecommendations.length} 条
+                    </Tag>
+                  </strong>
+                  <span style={{ color: '#666', fontSize: 13 }}>
+                    填写身份证、手机号、公司名等可自动推断关联字段
+                  </span>
+                </div>
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={applyAllContextRecommendations}
+                >
+                  一键填入全部
+                </Button>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                {contextRecommendations.map((rec, idx) => {
+                  const field = fieldMapRef.current[rec.targetField];
+                  const sourceLabel =
+                    AI_SOURCE_LABELS[rec.source] || {
+                      label: rec.source,
+                      color: 'default',
+                    };
+                  const fieldLabel = field?.fieldLabel || rec.targetField;
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => applyContextRecommendation(rec)}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#f0f5ff',
+                        border: '1px solid #adc6ff',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#d6e4ff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#f0f5ff';
+                      }}
+                    >
+                      <div style={{ fontSize: 12, color: '#595959', marginBottom: 4 }}>
+                        <Tag color={sourceLabel.color as any}>
+                          {sourceLabel.label}
+                        </Tag>
+                        <span style={{ marginLeft: 4 }}>{rec.explanation}</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: '#262626' }}>
+                        <span style={{ color: '#8c8c8c' }}>{fieldLabel}:</span>{' '}
+                        <strong>{String(rec.suggestedValue)}</strong>
+                      </div>
+                      <div
+                        style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}
+                      >
+                        置信度 {Math.round(rec.confidence * 100)}%
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          }
+        />
+      )}
 
       {Object.keys(recommendations).length > 0 && (
         <div
@@ -175,16 +475,19 @@ export default function TemplatePreview() {
                 style={{
                   padding: '4px 12px',
                   background: focusedField === rec.fieldName ? '#e6f7ff' : '#fff',
-                  border: focusedField === rec.fieldName
-                    ? '2px solid #91d5ff'
-                    : '1px solid #d9d9d9',
+                  border:
+                    focusedField === rec.fieldName
+                      ? '2px solid #91d5ff'
+                      : '1px solid #d9d9d9',
                   borderRadius: 4,
                   fontSize: 13,
                   cursor: 'pointer',
                 }}
                 onClick={() => applyRecommendation(rec.fieldName, rec.recommendedValue)}
               >
-                <span style={{ color: '#666', marginRight: 4 }}>{rec.fieldLabel}:</span>
+                <span style={{ color: '#666', marginRight: 4 }}>
+                  {rec.fieldLabel}:
+                </span>
                 <span style={{ fontWeight: 500 }}>{rec.recommendedValue}</span>
                 <Tag
                   color={SOURCE_LABELS[rec.items?.[0]?.source]?.color || 'default'}
@@ -205,12 +508,16 @@ export default function TemplatePreview() {
 
       <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: 1 }}>
-          <SchemaPreview
+          <SmartSchemaPreview
             ref={schemaPreviewRef}
             schema={schema}
+            fields={fields}
             editable
+            templateId={id}
             onSubmit={handleSubmit}
             onFieldFocus={handleFieldFocus}
+            showValidation={enableSmartValidation}
+            showAddressComplete={enableAddressComplete}
           />
         </div>
 

@@ -101,7 +101,8 @@ function getSuggestionIcon(type: string): string {
     HISTORICAL: '📜',
     TYPO_CORRECTION: '✏️',
     ADDRESS_AUTOCOMPLETE: '📍',
-    PATTERN_MATCH: '🔍'
+    PATTERN_MATCH: '🔍',
+    AI_CONTEXT_INFERENCE: '🤖'
   }
   return iconMap[type] || '💡'
 }
@@ -112,7 +113,14 @@ function getSuggestionTag(source: string): string {
     HISTORY_COLLABORATIVE: '相似用户',
     HISTORY_GLOBAL: '热门选择',
     SIMILARITY_MATCH: '相似匹配',
-    RULE_BASED: '规则推荐'
+    RULE_BASED: '规则推荐',
+    AI_ID_CARD_PARSE: '身份证解析',
+    AI_PHONE_PREFIX: '手机号分析',
+    AI_NAME_PATTERN: '姓名推断',
+    AI_COMPANY_KEYWORD: '公司识别',
+    AI_PROVINCE_CAPITAL: '省份关联',
+    AI_ADDRESS_COMPLETE: 'AI地址补全',
+    AI_CONTEXT_INFERENCE: 'AI关联推理'
   }
   return tagMap[source] || 'AI推荐'
 }

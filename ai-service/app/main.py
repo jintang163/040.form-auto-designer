@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.api.routes import router
+from app.api.recommend_routes import router as recommend_router
 from app.core.config import settings
 
 
@@ -51,6 +52,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api/recognize", tags=["recognize"])
+app.include_router(recommend_router)
 
 
 @app.get("/health")

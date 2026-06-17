@@ -14,6 +14,7 @@ import com.formdesigner.vo.FieldRecommendationVO;
 import com.formdesigner.vo.FieldValidationResultVO;
 import com.formdesigner.vo.FormValidationResultVO;
 import com.formdesigner.vo.ValidationRuleVO;
+import com.formdesigner.vo.ContextRecommendationVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class ValidationServiceImpl implements ValidationService {
     private final FormFieldMapper formFieldMapper;
     private final FieldValueStatsMapper statsMapper;
     private final SmartRecommendService smartRecommendService;
+    private final AiRecommendService aiRecommendService;
     private final ObjectMapper objectMapper;
 
     private static final Map<String, ValidationRuleVO> BUILTIN_RULES = new LinkedHashMap<>();
@@ -405,6 +407,57 @@ public class ValidationServiceImpl implements ValidationService {
         if (isTypoLikely(strValue, fieldName)) {
             generateTypoSuggestions(result, dto, strValue);
         }
+
+        if (dto.getContextData() != null && !dto.getContextData().isEmpty()
+                && aiRecommendService.isAvailable()) {
+            generateAiContextSuggestions(result, dto, field);
+        }
+    }
+
+    private void generateAiContextSuggestions(
+            FieldValidationResultVO result,
+            FieldValidateDTO dto,
+            FormField currentField) {
+
+        try {
+            List<Map<String, Object>> fieldDefs = new ArrayList<>();
+            List<FormField> allFields = formFieldMapper.selectByTemplateId(
+                    dto.getTemplateId(), currentTenantId());
+
+            for (FormField f : allFields) {
+                Map<String, Object> def = new LinkedHashMap<>();
+                def.put("fieldName", f.getFieldName());
+                def.put("fieldLabel", f.getFieldLabel());
+                def.put("inputType", f.getInputType());
+                fieldDefs.add(def);
+            }
+
+            List<String> targetFields = Collections.singletonList(currentField.getFieldName());
+            List<String> excludeFields = new ArrayList<>(dto.getContextData().keySet());
+
+            List<com.formdesigner.vo.ContextRecommendationVO> aiRecs =
+                    aiRecommendService.getContextRecommendations(
+                            dto.getTemplateId(),
+                            dto.getContextData(),
+                            fieldDefs,
+                            targetFields,
+                            excludeFields);
+
+            if (aiRecs != null && !aiRecs.isEmpty()) {
+                for (com.formdesigner.vo.ContextRecommendationVO aiRec : aiRecs) {
+                    FieldValidationResultVO.ValidationSuggestionVO suggestion =
+                            new FieldValidationResultVO.ValidationSuggestionVO();
+                    suggestion.setSuggestionType("AI_CONTEXT_INFERENCE");
+                    suggestion.setSuggestionMessage(aiRec.getExplanation());
+                    suggestion.setSuggestedValue(String.valueOf(aiRec.getSuggestedValue()));
+                    suggestion.setConfidence(aiRec.getConfidence());
+                    suggestion.setSource("AI_" + aiRec.getSource());
+                    result.getSuggestions().add(suggestion);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("生成AI上下文建议失败: {}", e.getMessage());
+        }
     }
 
     private boolean isAddressField(String fieldName, String fieldLabel) {
@@ -414,6 +467,29 @@ public class ValidationServiceImpl implements ValidationService {
 
     private void generateAddressSuggestions(FieldValidationResultVO result, String value) {
         if (value.length() < 3) return;
+
+        if (aiRecommendService.isAvailable()) {
+            try {
+                List<ContextRecommendationVO.AddressSuggestionVO> aiSuggestions =
+                        aiRecommendService.completeAddress(value, null, null, 5);
+
+                if (aiSuggestions != null && !aiSuggestions.isEmpty()) {
+                    for (ContextRecommendationVO.AddressSuggestionVO addr : aiSuggestions) {
+                        FieldValidationResultVO.ValidationSuggestionVO suggestion =
+                                new FieldValidationResultVO.ValidationSuggestionVO();
+                        suggestion.setSuggestionType("ADDRESS_AUTOCOMPLETE");
+                        suggestion.setSuggestionMessage("AI地址补全推荐");
+                        suggestion.setSuggestedValue(addr.getFullAddress());
+                        suggestion.setConfidence(addr.getConfidence());
+                        suggestion.setSource("AI_ADDRESS_COMPLETE");
+                        result.getSuggestions().add(suggestion);
+                    }
+                    return;
+                }
+            } catch (Exception e) {
+                log.debug("AI地址补全失败，使用本地规则: {}", e.getMessage());
+            }
+        }
 
         List<String[]> commonAddresses = Arrays.asList(
                 new String[]{"北京市", "北京市", "东城区"},

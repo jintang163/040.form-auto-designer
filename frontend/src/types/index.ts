@@ -138,6 +138,75 @@ export interface ApiResponse<T = any> {
   data: T;
 }
 
+export interface ServerValidationError {
+  errorCode: string;
+  errorMessage: string;
+  ruleType: string;
+  severity: number;
+}
+
+export interface ValidationSuggestion {
+  suggestionType: string;
+  suggestionMessage: string;
+  suggestedValue: string;
+  confidence: number;
+  source: string;
+}
+
+export interface FieldValidationResult {
+  fieldName: string;
+  fieldLabel?: string;
+  valid: boolean;
+  errors: ServerValidationError[];
+  suggestions: ValidationSuggestion[];
+  autoCorrectedValue?: string;
+}
+
+export interface FormValidationResult {
+  templateId: number;
+  overallValid: boolean;
+  fieldResults: FieldValidationResult[];
+  totalErrors: number;
+  totalWarnings: number;
+  totalSuggestions: number;
+}
+
+export interface FieldValidateRequest {
+  templateId: number;
+  fieldName: string;
+  fieldValue?: any;
+  contextData?: Record<string, any>;
+  submitterId?: string;
+  enableSuggestions?: boolean;
+  enableAutoCorrect?: boolean;
+}
+
+export interface FormValidateRequest {
+  templateId: number;
+  fieldValues: Record<string, any>;
+  submitterId?: string;
+  enableSuggestions?: boolean;
+  enableAutoCorrect?: boolean;
+  partialValidation?: boolean;
+}
+
+export interface ContextRecommendation {
+  targetField: string;
+  suggestedValue: any;
+  confidence: number;
+  source: string;
+  explanation: string;
+  relatedFields: string[];
+}
+
+export interface AddressSuggestion {
+  fullAddress: string;
+  province: string;
+  city: string;
+  district: string;
+  confidence: number;
+}
+
 export interface DistributionItem {
   value: string;
   label: string;
