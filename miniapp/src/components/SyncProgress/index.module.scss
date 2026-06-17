@@ -1,0 +1,84 @@
+@use '@/styles/variables.scss' as *;
+
+.syncProgress {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-md;
+  }
+
+  .title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  .percentage {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  .progressBar {
+    height: 12rpx;
+    background: $color-bg-page;
+    border-radius: 6rpx;
+    overflow: hidden;
+    margin-bottom: $spacing-lg;
+  }
+
+  .progressFill {
+    height: 100%;
+    background: $gradient-primary;
+    border-radius: 6rpx;
+    transition: width $transition-base ease;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .statItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    margin-bottom: $spacing-xs;
+
+    &.completed {
+      background: $color-completed;
+    }
+
+    &.pending {
+      background: $color-pending;
+    }
+
+    &.failed {
+      background: $color-failed;
+    }
+  }
+
+  .statLabel {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    margin-bottom: $spacing-xs;
+  }
+
+  .statValue {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+}

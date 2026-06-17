@@ -1,0 +1,44 @@
+@use '@/styles/variables.scss' as *;
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-xs;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+
+  &.sm {
+    padding: 2rpx 12rpx;
+    font-size: $font-size-xs;
+  }
+
+  &.md {
+    padding: 4rpx 16rpx;
+    font-size: $font-size-sm;
+  }
+
+  &.pending {
+    background: rgba(255, 125, 0, 0.1);
+    color: $color-pending;
+  }
+
+  &.syncing {
+    background: rgba(255, 125, 0, 0.1);
+    color: $color-syncing;
+  }
+
+  &.completed {
+    background: rgba(0, 180, 42, 0.1);
+    color: $color-completed;
+  }
+
+  &.failed {
+    background: rgba(245, 63, 63, 0.1);
+    color: $color-failed;
+  }
+
+  .text {
+    font-size: inherit;
+  }
+}

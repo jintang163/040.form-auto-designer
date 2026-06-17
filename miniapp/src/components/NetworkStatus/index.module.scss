@@ -1,0 +1,39 @@
+@use '@/styles/variables.scss' as *;
+
+.networkStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  background: rgba(134, 144, 156, 0.1);
+
+  .dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+
+    &.online {
+      animation: pulse 2s infinite;
+    }
+
+    &.offline {
+      opacity: 0.6;
+    }
+  }
+
+  .label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,310 @@
+@use '@/styles/variables.scss' as *;
+
+.minePage {
+  min-height: 100vh;
+  background: $color-bg-page;
+}
+
+.header {
+  background: $gradient-primary;
+  padding: $spacing-2xl $page-padding $spacing-xl;
+  border-radius: 0 0 $radius-lg $radius-lg;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+}
+
+.avatar {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80rpx;
+  border: 6rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.userInfoContent {
+  flex: 1;
+}
+
+.userName {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.userRole {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.userNetwork {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: $radius-button;
+  align-self: flex-start;
+}
+
+.networkDot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: $color-success;
+
+  &.offline {
+    background: $color-error;
+  }
+}
+
+.networkText {
+  font-size: $font-size-xs;
+  color: $color-text-white;
+}
+
+.statsRow {
+  display: flex;
+  justify-content: space-around;
+  margin-top: $spacing-xl;
+  padding-top: $spacing-xl;
+  border-top: 2rpx solid rgba(255, 255, 255, 0.15);
+}
+
+.statItem {
+  text-align: center;
+}
+
+.statNumber {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  display: block;
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: $spacing-xs;
+}
+
+.section {
+  padding: 0 $page-padding;
+  margin-top: $spacing-lg;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+
+  .sectionTitle {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  .sectionAction {
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+}
+
+.menuList {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-lg;
+  border-bottom: 2rpx solid $color-border;
+  transition: background $transition-base;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:active {
+    background: $color-bg-page;
+  }
+}
+
+.menuIcon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-sm;
+  background: rgba(22, 93, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  margin-right: $spacing-md;
+
+  &.warning {
+    background: rgba(255, 159, 67, 0.1);
+  }
+
+  &.danger {
+    background: rgba(245, 63, 63, 0.1);
+  }
+
+  &.success {
+    background: rgba(0, 180, 42, 0.1);
+  }
+}
+
+.menuContent {
+  flex: 1;
+}
+
+.menuTitle {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+}
+
+.menuDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.menuArrow {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+}
+
+.menuBadge {
+  padding: $spacing-xs $spacing-md;
+  background: $color-error;
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-xs;
+  margin-right: $spacing-sm;
+}
+
+.storageInfo {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.storageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.storageTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.storageSize {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.storageBar {
+  height: 16rpx;
+  background: $color-bg-page;
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin-bottom: $spacing-md;
+}
+
+.storageFill {
+  height: 100%;
+  background: $gradient-primary;
+  border-radius: 8rpx;
+  transition: width $transition-base;
+}
+
+.storageDetails {
+  display: flex;
+  justify-content: space-between;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.storageDetailItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  .dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+
+    &.images {
+      background: $color-primary;
+    }
+
+    &.data {
+      background: $color-syncing;
+    }
+
+    &.free {
+      background: $color-border;
+    }
+  }
+}
+
+.tipCard {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffedd5 100%);
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  border-left: 8rpx solid $color-warning;
+}
+
+.tipTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #d97706;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.tipContent {
+  font-size: $font-size-sm;
+  color: #92400e;
+  line-height: 1.6;
+}
+
+.versionInfo {
+  text-align: center;
+  padding: $spacing-xl 0 $spacing-2xl;
+
+  .versionText {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  .copyright {
+    font-size: $font-size-xs;
+    color: $color-text-disabled;
+    margin-top: $spacing-xs;
+  }
+}

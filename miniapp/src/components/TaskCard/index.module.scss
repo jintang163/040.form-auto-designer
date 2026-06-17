@@ -1,0 +1,99 @@
+@use '@/styles/variables.scss' as *;
+
+.taskCard {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: $shadow-card-hover;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-md;
+  }
+
+  .title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    @include text-ellipsis;
+    max-width: 400rpx;
+  }
+
+  .meta {
+    display: flex;
+    gap: $spacing-xl;
+    margin-bottom: $spacing-md;
+    padding: $spacing-md;
+    background: $color-bg-page;
+    border-radius: $radius-sm;
+  }
+
+  .metaItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+
+  .metaLabel {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    margin-bottom: $spacing-xs;
+  }
+
+  .metaValue {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  .errorBox {
+    background: rgba(245, 63, 63, 0.1);
+    border-radius: $radius-sm;
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  .errorText {
+    font-size: $font-size-sm;
+    color: $color-error;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: $spacing-md;
+    border-top: 1rpx solid $color-divider;
+  }
+
+  .time {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+
+  .arrow {
+    width: 48rpx;
+    height: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-bg-page;
+    border-radius: 50%;
+  }
+
+  .arrowText {
+    font-size: 36rpx;
+    color: $color-text-tertiary;
+    line-height: 1;
+  }
+}

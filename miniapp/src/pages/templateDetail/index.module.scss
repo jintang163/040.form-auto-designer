@@ -1,0 +1,387 @@
+@use '@/styles/variables.scss' as *;
+
+.templateDetail {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 180rpx;
+}
+
+.header {
+  background: $gradient-primary;
+  padding: $spacing-xl $page-padding;
+  border-radius: 0 0 $radius-lg $radius-lg;
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.templateIcon {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64rpx;
+  flex-shrink: 0;
+}
+
+.templateInfo {
+  flex: 1;
+}
+
+.templateName {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.templateCategory {
+  display: inline-block;
+  padding: $spacing-xs $spacing-md;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: $radius-button;
+  font-size: $font-size-xs;
+  color: $color-text-white;
+  margin-bottom: $spacing-sm;
+}
+
+.templateDesc {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+}
+
+.downloadStatus {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: $radius-button;
+  align-self: flex-start;
+
+  .statusDot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-success;
+
+    &.notDownloaded {
+      background: $color-warning;
+    }
+  }
+
+  .statusText {
+    font-size: $font-size-xs;
+    color: $color-text-white;
+  }
+}
+
+.templateStats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: $spacing-xl;
+  padding-top: $spacing-xl;
+  border-top: 2rpx solid rgba(255, 255, 255, 0.15);
+}
+
+.statItem {
+  text-align: center;
+}
+
+.statNumber {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  display: block;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: $spacing-xs;
+}
+
+.section {
+  padding: 0 $page-padding;
+  margin-top: $spacing-lg;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+
+  .sectionTitle {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  .sectionCount {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    background: $color-bg-card;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-button;
+  }
+}
+
+.fieldsPreview {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+}
+
+.fieldPreviewItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-lg;
+  border-bottom: 2rpx solid $color-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.fieldIcon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-sm;
+  background: rgba(22, 93, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+
+  &.required {
+    background: rgba(245, 63, 63, 0.1);
+  }
+}
+
+.fieldContent {
+  flex: 1;
+}
+
+.fieldLabel {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  .requiredMark {
+    color: $color-error;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.fieldDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.fieldTypeTag {
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-page;
+  border-radius: $radius-button;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  flex-shrink: 0;
+}
+
+.templateMeta {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm 0;
+
+  &:not(:last-child) {
+    border-bottom: 2rpx solid $color-border;
+  }
+}
+
+.metaLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.metaValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding calc($spacing-md + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 12rpx rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: $spacing-md;
+}
+
+.bottomBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-base;
+
+  &.primary {
+    background: $gradient-primary;
+    color: $color-text-white;
+  }
+
+  &.secondary {
+    background: $color-bg-page;
+    color: $color-text-secondary;
+  }
+
+  &.danger {
+    background: rgba(245, 63, 63, 0.1);
+    color: $color-error;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.fieldTypeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.tipCard {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  border-left: 8rpx solid $color-primary;
+
+  .tipTitle {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    margin-bottom: $spacing-sm;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .tipContent {
+    font-size: $font-size-sm;
+    color: #1e40af;
+    line-height: 1.6;
+
+    .tipItem {
+      display: block;
+      margin-top: $spacing-xs;
+    }
+  }
+}
+
+.emptyState {
+  padding: 160rpx 0;
+  text-align: center;
+
+  .emptyIcon {
+    font-size: 120rpx;
+    opacity: 0.3;
+    margin-bottom: $spacing-lg;
+  }
+
+  .emptyText {
+    font-size: $font-size-lg;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  .emptySubText {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+}
+
+.downloadProgress {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+
+  .progressTitle {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  .progressPercent {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+}
+
+.progressBar {
+  height: 12rpx;
+  background: $color-bg-page;
+  border-radius: 6rpx;
+  overflow: hidden;
+  margin-bottom: $spacing-sm;
+}
+
+.progressFill {
+  height: 100%;
+  background: $gradient-primary;
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-align: center;
+}

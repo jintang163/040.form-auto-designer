@@ -1,0 +1,162 @@
+@use '@/styles/variables.scss' as *;
+
+.formField {
+  margin-bottom: $spacing-lg;
+
+  &.disabled {
+    opacity: 0.6;
+  }
+
+  .label {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  .labelText {
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  .required {
+    color: $color-error;
+    margin-left: $spacing-xs;
+    font-size: $font-size-md;
+  }
+
+  .fieldWrapper {
+    position: relative;
+  }
+
+  .input {
+    width: 100%;
+    height: 88rpx;
+    padding: 0 $spacing-md;
+    background: $color-bg-page;
+    border: 2rpx solid transparent;
+    border-radius: $radius-md;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    transition: all $transition-fast;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: $color-text-tertiary;
+    }
+
+    &.focused {
+      border-color: $color-primary;
+      background: $color-bg-card;
+    }
+
+    &.error {
+      border-color: $color-error;
+    }
+  }
+
+  .textarea {
+    width: 100%;
+    min-height: 160rpx;
+    padding: $spacing-md;
+    background: $color-bg-page;
+    border: 2rpx solid transparent;
+    border-radius: $radius-md;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    transition: all $transition-fast;
+    box-sizing: border-box;
+    line-height: 1.6;
+
+    &::placeholder {
+      color: $color-text-tertiary;
+    }
+
+    &.focused {
+      border-color: $color-primary;
+      background: $color-bg-card;
+    }
+
+    &.error {
+      border-color: $color-error;
+    }
+  }
+
+  .picker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 88rpx;
+    padding: 0 $spacing-md;
+    background: $color-bg-page;
+    border: 2rpx solid transparent;
+    border-radius: $radius-md;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    transition: all $transition-fast;
+    box-sizing: border-box;
+
+    &.error {
+      border-color: $color-error;
+    }
+
+    .placeholder {
+      color: $color-text-tertiary;
+    }
+
+    .arrow {
+      font-size: 36rpx;
+      color: $color-text-tertiary;
+      transform: rotate(90deg);
+    }
+  }
+
+  .radioGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+  }
+
+  .radioItem {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+  }
+
+  .radioLabel {
+    margin-left: $spacing-xs;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+  }
+
+  .checkboxGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+  }
+
+  .checkboxItem {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+  }
+
+  .checkboxLabel {
+    margin-left: $spacing-xs;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+  }
+
+  .errorText {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-error;
+  }
+}
