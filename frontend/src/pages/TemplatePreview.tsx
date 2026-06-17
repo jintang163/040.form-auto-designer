@@ -9,6 +9,7 @@ import {
   SafetyOutlined,
   EnvironmentOutlined,
   AuditOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons';
 import {
   templateApi,
@@ -22,6 +23,7 @@ import {
 import { generateFormSchema } from '@/utils/schemaTransform';
 import SmartSchemaPreview, { type SmartSchemaPreviewRef } from '@/components/SmartSchemaPreview';
 import WorkflowApproval from '@/components/WorkflowApproval';
+import FormShareModal from '@/components/FormShareModal';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import type {
   FormField,
@@ -68,6 +70,7 @@ export default function TemplatePreview() {
   const [workflowStatus, setWorkflowStatus] = useState<string>('');
   const [showApprovalPanel, setShowApprovalPanel] = useState(false);
   const [hasWorkflow, setHasWorkflow] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const fieldMapRef = useRef<Record<string, FormField>>({});
 
@@ -395,6 +398,15 @@ export default function TemplatePreview() {
               刷新推荐
             </Button>
           </Tooltip>
+          <Tooltip title="分享表单">
+            <Button
+              type="primary"
+              icon={<ShareAltOutlined />}
+              onClick={() => setShareModalVisible(true)}
+            >
+              分享
+            </Button>
+          </Tooltip>
           <Button onClick={() => navigate(-1)}>返回</Button>
         </Space>
       </div>
@@ -652,6 +664,13 @@ export default function TemplatePreview() {
           />
         </div>
       )}
+
+      <FormShareModal
+        open={shareModalVisible}
+        templateId={id || ''}
+        templateName={templateName}
+        onClose={() => setShareModalVisible(false)}
+      />
     </div>
   );
 }

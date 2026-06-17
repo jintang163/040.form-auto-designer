@@ -449,3 +449,43 @@ CREATE INDEX idx_wt_workflow_instance_id ON workflow_task (workflow_instance_id)
 CREATE INDEX idx_wt_task_id ON workflow_task (task_id);
 CREATE INDEX idx_wt_assignee ON workflow_task (assignee);
 CREATE INDEX idx_wt_action ON workflow_task (action);
+
+-- ============================================================
+-- 13. 表单分享表 form_share
+-- ============================================================
+CREATE TABLE IF NOT EXISTS form_share (
+    id              BIGINT          NOT NULL AUTO_INCREMENT,
+    share_code      VARCHAR(32)     NOT NULL,
+    template_id     BIGINT          NOT NULL,
+    share_type      VARCHAR(20)     DEFAULT 'VIEW',
+    expire_at       TIMESTAMP,
+    password        VARCHAR(200),
+    allow_edit      SMALLINT        DEFAULT 0,
+    created_by      VARCHAR(100),
+    tenant_id       BIGINT          DEFAULT 1,
+    created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    revoked         SMALLINT        DEFAULT 0,
+    CONSTRAINT pk_form_share PRIMARY KEY (id),
+    CONSTRAINT uk_share_code UNIQUE (share_code),
+    CONSTRAINT fk_share_template FOREIGN KEY (template_id) REFERENCES form_template (id)
+);
+
+COMMENT ON TABLE form_share IS '表单分享表';
+COMMENT ON COLUMN form_share.id IS '主键ID';
+COMMENT ON COLUMN form_share.share_code IS '分享码(唯一)';
+COMMENT ON COLUMN form_share.template_id IS '关联模板ID';
+COMMENT ON COLUMN form_share.share_type IS '分享类型: VIEW-查看, EDIT-编辑, COLLAB-协作';
+COMMENT ON COLUMN form_share.expire_at IS '过期时间';
+COMMENT ON COLUMN form_share.password IS '访问密码(BCrypt加密)';
+COMMENT ON COLUMN form_share.allow_edit IS '是否允许编辑: 0-否, 1-是';
+COMMENT ON COLUMN form_share.created_by IS '创建人';
+COMMENT ON COLUMN form_share.tenant_id IS '租户ID';
+COMMENT ON COLUMN form_share.created_at IS '创建时间';
+COMMENT ON COLUMN form_share.updated_at IS '更新时间';
+COMMENT ON COLUMN form_share.revoked IS '是否已撤销: 0-否, 1-是';
+
+CREATE INDEX idx_form_share_template_id ON form_share (template_id);
+CREATE INDEX idx_form_share_tenant_id ON form_share (tenant_id);
+CREATE INDEX idx_form_share_created_by ON form_share (created_by);
+CREATE INDEX idx_form_share_expire_at ON form_share (expire_at);

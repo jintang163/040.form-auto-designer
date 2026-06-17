@@ -11,6 +11,7 @@ import DataStatistics from './pages/DataStatistics';
 import WebhookRules from './pages/WebhookRules';
 import TenantManagement from './pages/TenantManagement';
 import ApprovalCenter from './pages/ApprovalCenter';
+import CollaborationFill from './pages/CollaborationFill';
 import { useTenantStore } from './store/tenantStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/share/:shareCode" element={<CollaborationFill />} />
       <Route
         path="/"
         element={

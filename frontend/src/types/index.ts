@@ -459,3 +459,61 @@ export interface LinkageEvaluateResult {
   disabled: boolean;
   message?: string;
 }
+
+export interface FormShare {
+  shareCode: string;
+  shareUrl: string;
+  qrCodeUrl: string;
+  templateId: string;
+  templateName: string;
+  shareType: 'VIEW' | 'EDIT' | 'COLLAB';
+  expireAt?: string;
+  hasPassword: boolean;
+  allowEdit: boolean;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface FormShareCreateRequest {
+  templateId: number;
+  shareType?: string;
+  expireHours?: number;
+  password?: string;
+  allowEdit?: boolean;
+  createdBy?: string;
+}
+
+export interface CollaborationCursor {
+  sessionId: string;
+  userId: string;
+  userName: string;
+  avatarColor: string;
+  currentField?: string;
+  fieldLabel?: string;
+  scrollTop?: number;
+  lastActive?: string;
+}
+
+export interface FieldLock {
+  fieldName: string;
+  fieldLabel?: string;
+  lockedBy: string;
+  lockedByName: string;
+  avatarColor: string;
+  lockedAt: string;
+  expireAt: string;
+}
+
+export interface CollaborationMessage {
+  type: string;
+  shareCode: string;
+  sessionId: string;
+  userId: string;
+  userName: string;
+  avatarColor: string;
+  fieldName?: string;
+  fieldLabel?: string;
+  fieldValue?: any;
+  scrollTop?: number;
+  timestamp?: number;
+}

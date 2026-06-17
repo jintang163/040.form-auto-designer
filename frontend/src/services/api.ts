@@ -35,6 +35,9 @@ import type {
   WorkflowDeployRequest,
   WorkflowStartRequest,
   WorkflowActionRequest,
+  FormShare,
+  CollaborationCursor,
+  FieldLock,
 } from '@/types';
 
 const request = axios.create({
@@ -623,4 +626,40 @@ export const workflowApi = {
 
   generateBpmnXml: (data: WorkflowDeployRequest) =>
     request.post<any, ApiResponse<string>>('/workflow/generate-bpmn', data).then(unwrap),
+};
+
+export const shareApi = {
+  createShare: (data: {
+    templateId: number;
+    shareType?: string;
+    expireHours?: number;
+    password?: string;
+    allowEdit?: boolean;
+    createdBy?: string;
+  }) =>
+    request.post<any, ApiResponse<FormShare>>('/form-share', data).then(unwrap),
+
+  getShare: (shareCode: string) =>
+    request.get<any, ApiResponse<FormShare>>(`/form-share/${shareCode}`).then(unwrap),
+
+  validateShare: (shareCode: string, password?: string) =>
+    request.post<any, ApiResponse<boolean>>(`/form-share/${shareCode}/validate`, { password }).then(unwrap),
+
+  revokeShare: (shareCode: string) =>
+    request.post<any, ApiResponse<void>>(`/form-share/${shareCode}/revoke`).then(unwrap),
+
+  refreshShareCode: (shareCode: string) =>
+    request.post<any, ApiResponse<FormShare>>(`/form-share/${shareCode}/refresh`).then(unwrap),
+
+  listShares: (templateId: string) =>
+    request.get<any, ApiResponse<FormShare[]>>(`/form-share/template/${templateId}`).then(unwrap),
+
+  getOnlineUsers: (shareCode: string) =>
+    request.get<any, ApiResponse<CollaborationCursor[]>>(`/form-share/${shareCode}/online-users`).then(unwrap),
+
+  getFieldLocks: (shareCode: string) =>
+    request.get<any, ApiResponse<Record<string, FieldLock>>>(`/form-share/${shareCode}/field-locks`).then(unwrap),
+
+  getFieldValues: (shareCode: string) =>
+    request.get<any, ApiResponse<Record<string, any>>>(`/form-share/${shareCode}/field-values`).then(unwrap),
 };
