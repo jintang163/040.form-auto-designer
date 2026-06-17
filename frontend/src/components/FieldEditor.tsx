@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Form, Input, Select, Switch, InputNumber, Button, Space, Card, Divider, Tag, Alert, Tabs } from 'antd';
+import { Form, Input, Select, Switch, InputNumber, Button, Space, Card, Divider, Tag, Alert, Tabs, message, Spin } from 'antd';
 import { MinusCircleOutlined, PlusOutlined, GlobalOutlined } from '@ant-design/icons';
 import type { FieldConfig, InputType, ValidationRule, LanguageCode } from '@/types';
 import { LANGUAGE_OPTIONS } from '@/types';
-import { fieldApi } from '@/services/api';
+import { fieldApi, i18nApi } from '@/services/api';
 
 interface FieldEditorProps {
   field: FieldConfig;
@@ -32,14 +32,42 @@ export default function FieldEditor({ field, onChange, allFields, templateId }: 
   const [form] = Form.useForm();
   const [enLabel, setEnLabel] = useState<string>('');
   const [savingI18n, setSavingI18n] = useState(false);
+  const [enOptions, setEnOptions] = useState<Record<string, string>>({});
+  const [loadingI18n, setLoadingI18n] = useState(false);
 
   useEffect(() => {
     form.setFieldsValue(field);
     const labelI18n = (field as any).fieldLabelI18n;
     if (labelI18n && typeof labelI18n === 'object') {
       setEnLabel(labelI18n['en-US'] || '');
+    } else {
+      setEnLabel('');
+    }
+    const optionsI18n = (field as any).optionsI18n;
+    if (optionsI18n && typeof optionsI18n === 'object' && optionsI18n['en-US']) {
+      setEnOptions({ ...optionsI18n['en-US'] });
+    } else {
+      setEnOptions({});
     }
   }, [field, form]);
+
+  useEffect(() => {
+    if (!templateId || !field.fieldName) return;
+    const loadSavedI18n = async () => {
+      setLoadingI18n(true);
+      try {
+        const translations = await i18nApi.getTranslations(templateId, 'en-US');
+        if (translations[field.fieldName] && !enLabel) {
+          setEnLabel(translations[field.fieldName]);
+        }
+      } catch (e) {
+        console.warn('加载多语言数据失败:', e);
+      } finally {
+        setLoadingI18n(false);
+      }
+    };
+    loadSavedI18n();
+  }, [templateId, field.fieldName]);
 
   const handleValuesChange = (_: any, allValues: any) => {
     onChange(allValues);
@@ -54,16 +82,28 @@ export default function FieldEditor({ field, onChange, allFields, templateId }: 
       const labels: Record<string, string> = {
         [field.fieldName]: enLabel,
       };
+      Object.entries(enOptions).forEach(([optValue, optLabel]) => {
+        if (optLabel) {
+          labels[`${field.fieldName}.option.${optValue}`] = optLabel;
+        }
+      });
       await fieldApi.saveFieldLabelsI18n(templateId, 'en-US', labels);
+      await i18nApi.saveBatchTranslations(templateId, 'en-US', labels);
       onChange({
         ...field,
         fieldLabelI18n: {
           ...((field as any).fieldLabelI18n || {}),
           'en-US': enLabel,
         },
+        optionsI18n: {
+          ...((field as any).optionsI18n || {}),
+          'en-US': { ...enOptions },
+        },
       } as any);
+      message.success('多语言标签保存成功');
     } catch (e: any) {
       console.error('保存多语言标签失败:', e);
+      message.error('保存失败: ' + (e.message || '未知错误'));
     } finally {
       setSavingI18n(false);
     }
@@ -132,9 +172,26 @@ export default function FieldEditor({ field, onChange, allFields, templateId }: 
                     中文标签（与字段标签一致）
                   </div>
                   <Input value={field.fieldLabel} disabled />
+                  {(field.inputType === 'select' || field.inputType === 'multiSelect') && field.options && field.options.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ color: '#666', fontSize: 13, marginBottom: 8 }}>
+                        选项（与选项配置一致）
+                      </div>
+                      {field.options.map((opt: { label: string; value: string }) => (
+                        <div key={opt.value} style={{ marginBottom: 4 }}>
+                          <Input value={opt.label} disabled />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div style={{ padding: '8px 0' }}>
+                  {loadingI18n && (
+                    <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                      <Spin size="small" />
+                    </div>
+                  )}
                   <div style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>
                     英文标签
                   </div>
@@ -143,11 +200,33 @@ export default function FieldEditor({ field, onChange, allFields, templateId }: 
                     onChange={(e) => setEnLabel(e.target.value)}
                     placeholder="请输入英文标签"
                   />
+                  {(field.inputType === 'select' || field.inputType === 'multiSelect') && field.options && field.options.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ color: '#666', fontSize: 13, marginBottom: 8 }}>
+                        选项翻译
+                      </div>
+                      {field.options.map((opt: { label: string; value: string }) => (
+                        <div key={opt.value} style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 12, color: '#999', marginBottom: 2 }}>
+                            中文: {opt.label} ({opt.value})
+                          </div>
+                          <Input
+                            value={enOptions[opt.value] || ''}
+                            onChange={(e) => setEnOptions((prev) => ({
+                              ...prev,
+                              [opt.value]: e.target.value,
+                            }))}
+                            placeholder={`Enter English label for "${opt.label}"`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {templateId && (
                     <Button
                       type="primary"
                       size="small"
-                      style={{ marginTop: 8 }}
+                      style={{ marginTop: 12 }}
                       onClick={handleSaveI18n}
                       loading={savingI18n}
                     >
@@ -155,7 +234,7 @@ export default function FieldEditor({ field, onChange, allFields, templateId }: 
                     </Button>
                   )}
                   {!templateId && (
-                    <div style={{ color: '#faad14', fontSize: 12, marginTop: 8 }}>
+                    <div style={{ color: '#faad14', fontSize: 12, marginTop: 12 }}>
                       请先保存模板后再配置多语言标签
                     </div>
                   )}

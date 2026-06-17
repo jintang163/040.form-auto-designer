@@ -389,7 +389,7 @@ export default function TemplateCreate() {
             )}
           </Col>
           <Col span={8}>
-            <SchemaPreview schema={schema} templateId={isEdit && id ? id : undefined} />
+            <SchemaPreview schema={schema} fields={fields} templateId={isEdit && id ? id : undefined} />
           </Col>
         </Row>
       )}
@@ -397,7 +397,7 @@ export default function TemplateCreate() {
       {currentStep === 2 && (
         <Row gutter={24}>
           <Col span={14}>
-            <SchemaPreview schema={schema} templateId={isEdit && id ? id : undefined} />
+            <SchemaPreview schema={schema} fields={fields} templateId={isEdit && id ? id : undefined} />
           </Col>
           <Col span={10}>
             <Card title="模板信息" size="small">

@@ -86,6 +86,29 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
     const [externallyDisabledFields, setExternallyDisabledFields] = useState<Set<string>>(new Set());
     const { language, translate } = useI18n();
 
+    const translateOptionLabel = useCallback(
+      (fieldName: string, option: { label: string; value: string }) => {
+        const field = fieldMap[fieldName];
+        const optionsI18n = (field as any)?.optionsI18n;
+        if (optionsI18n && optionsI18n[language] && optionsI18n[language][option.value]) {
+          return {
+            ...option,
+            label: optionsI18n[language][option.value],
+          };
+        }
+        const translationKey = `${fieldName}.option.${option.value}`;
+        const translated = translate(translationKey, '');
+        if (translated && translated !== translationKey) {
+          return {
+            ...option,
+            label: translated,
+          };
+        }
+        return option;
+      },
+      [fieldMap, language, translate]
+    );
+
     const form = useMemo(() => {
       const f = createForm({
         editable,
@@ -384,7 +407,14 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
           p.title = translatedLabel;
 
           if (dynamicOptionsMap[key]) {
-            p.enum = dynamicOptionsMap[key];
+            p.enum = dynamicOptionsMap[key].map((opt: any) => translateOptionLabel(key, opt));
+          } else if (p.enum && Array.isArray(p.enum)) {
+            p.enum = p.enum.map((opt: any) => {
+              if (typeof opt === 'object' && opt.value !== undefined) {
+                return translateOptionLabel(key, opt);
+              }
+              return opt;
+            });
           }
           if (requiredFields.has(key)) {
             p.required = true;
@@ -441,6 +471,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       showAddressComplete,
       isFieldLockedByOther,
       translate,
+      translateOptionLabel,
     ]);
 
     const schemaJson = useMemo(

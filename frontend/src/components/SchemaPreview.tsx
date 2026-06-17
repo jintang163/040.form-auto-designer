@@ -2,10 +2,12 @@ import { useMemo, useImperativeHandle, forwardRef, useEffect, useState, useCallb
 import { createForm } from '@formily/core';
 import { FormProvider, SchemaField } from '@formily/react';
 import { FormItem, Input, NumberPicker, DatePicker, Select, Upload, TextArea } from '@formily/antd';
-import type { FormSchema } from '@/types';
-import { Card } from 'antd';
+import type { FormSchema, FormField } from '@/types';
+import { Card, Space } from 'antd';
 import type { Form } from '@formily/core';
 import { linkageApi } from '@/services/api';
+import { useI18n } from '@/contexts/I18nContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export interface SchemaPreviewRef {
   setFieldValue: (fieldName: string, value: any) => void;
@@ -17,6 +19,7 @@ export interface SchemaPreviewRef {
 
 interface SchemaPreviewProps {
   schema: FormSchema;
+  fields?: FormField[];
   editable?: boolean;
   values?: Record<string, any>;
   templateId?: string;
@@ -35,7 +38,7 @@ const SchemaFieldComponents = {
 };
 
 const SchemaPreview = forwardRef<SchemaPreviewRef, SchemaPreviewProps>(
-  ({ schema, editable = true, values, templateId, onSubmit, onFieldFocus }, ref) => {
+  ({ schema, fields = [], editable = true, values, templateId, onSubmit, onFieldFocus }, ref) => {
     const form = useMemo(() => {
       const f = createForm({
         editable,
@@ -44,11 +47,50 @@ const SchemaPreview = forwardRef<SchemaPreviewRef, SchemaPreviewProps>(
       return f;
     }, [schema, editable, values]);
 
+    const { language, translate, loadTranslations } = useI18n();
+
+    const fieldMap = useMemo(() => {
+      const map: Record<string, FormField> = {};
+      fields.forEach((f) => {
+        map[f.fieldName] = f;
+      });
+      return map;
+    }, [fields]);
+
+    useEffect(() => {
+      if (templateId) {
+        loadTranslations(templateId);
+      }
+    }, [templateId, language, loadTranslations]);
+
     const [hiddenFields, setHiddenFields] = useState<Set<string>>(new Set());
     const [computedValues, setComputedValues] = useState<Record<string, any>>({});
     const [dynamicOptionsMap, setDynamicOptionsMap] = useState<Record<string, { label: string; value: string }[]>>({});
     const [requiredFields, setRequiredFields] = useState<Set<string>>(new Set());
     const [disabledFields, setDisabledFields] = useState<Set<string>>(new Set());
+
+    const translateOptionLabel = useCallback(
+      (fieldName: string, option: { label: string; value: string }) => {
+        const field = fieldMap[fieldName];
+        const optionsI18n = (field as any)?.optionsI18n;
+        if (optionsI18n && optionsI18n[language] && optionsI18n[language][option.value]) {
+          return {
+            ...option,
+            label: optionsI18n[language][option.value],
+          };
+        }
+        const translationKey = `${fieldName}.option.${option.value}`;
+        const translated = translate(translationKey, '');
+        if (translated && translated !== translationKey) {
+          return {
+            ...option,
+            label: translated,
+          };
+        }
+        return option;
+      },
+      [fieldMap, language, translate]
+    );
 
     const applyLinkageResults = useCallback((results: any[]) => {
       const newHidden = new Set<string>();
@@ -134,9 +176,22 @@ const SchemaPreview = forwardRef<SchemaPreviewRef, SchemaPreviewProps>(
           props[key] = { ...props[key], 'x-display': 'none' };
         } else {
           const p = { ...props[key] };
+          const field = fieldMap[key];
+          const originalLabel = field?.fieldLabel || p.title || key;
+          const translatedLabel = translate(key, originalLabel);
+          p.title = translatedLabel;
+
           if (dynamicOptionsMap[key]) {
-            p.enum = dynamicOptionsMap[key];
+            p.enum = dynamicOptionsMap[key].map((opt) => translateOptionLabel(key, opt));
+          } else if (p.enum && Array.isArray(p.enum)) {
+            p.enum = p.enum.map((opt: any) => {
+              if (typeof opt === 'object' && opt.value !== undefined) {
+                return translateOptionLabel(key, opt);
+              }
+              return opt;
+            });
           }
+
           if (requiredFields.has(key)) {
             p.required = true;
           }
@@ -147,7 +202,7 @@ const SchemaPreview = forwardRef<SchemaPreviewRef, SchemaPreviewProps>(
         }
       }
       return { type: 'object' as const, properties: props };
-    }, [schema, hiddenFields, dynamicOptionsMap, requiredFields, disabledFields]);
+    }, [schema, hiddenFields, dynamicOptionsMap, requiredFields, disabledFields, fieldMap, translate, translateOptionLabel]);
 
     const schemaJson = useMemo(() => ({
       type: 'object',
@@ -155,7 +210,15 @@ const SchemaPreview = forwardRef<SchemaPreviewRef, SchemaPreviewProps>(
     }), [enhancedSchema]);
 
     return (
-      <Card title="表单预览" size="small">
+      <Card
+        title={
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <span>{translate('formPreview', '表单预览')}</span>
+            <LanguageSwitcher />
+          </Space>
+        }
+        size="small"
+      >
         <FormProvider form={form}>
           <SchemaField schema={schemaJson} components={SchemaFieldComponents} />
           {onSubmit && editable && (
@@ -172,7 +235,7 @@ const SchemaPreview = forwardRef<SchemaPreviewRef, SchemaPreviewProps>(
                   cursor: 'pointer',
                 }}
               >
-                提交
+                {translate('submit', '提交')}
               </button>
             </div>
           )}
