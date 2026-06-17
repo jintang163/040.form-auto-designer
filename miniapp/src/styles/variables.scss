@@ -19,6 +19,8 @@ $spacing-md: 24rpx;
 $spacing-lg: 32rpx;
 $spacing-xl: 48rpx;
 $spacing-2xl: 64rpx;
+$spacing-3xl: 96rpx;
+$spacing-4xl: 128rpx;
 
 // 圆角（语义化）
 $radius-xs: 4rpx; // 小元素：标签、徽章
@@ -43,6 +45,7 @@ $shadow-popup: 0 8rpx 32rpx rgba(0, 0, 0, 0.15); // 弹窗阴影
 // 字体大小
 $font-size-xs: 22rpx;
 $font-size-sm: 24rpx;
+$font-size-base: 28rpx;
 $font-size-md: 28rpx;
 $font-size-lg: 32rpx;
 $font-size-xl: 36rpx;

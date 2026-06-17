@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, useDidHide } from '@tarojs/taro';
 import classnames from 'classnames';
@@ -9,6 +9,7 @@ import { useNetwork } from '@/hooks/useNetwork';
 import FormField from '@/components/FormField';
 import NetworkStatus from '@/components/NetworkStatus';
 import { validateForm } from '@/utils/validator';
+import { formTracker } from '@/utils/formTracker';
 import dayjs from 'dayjs';
 import type { FormTemplate, FormField as FormFieldType, ValidationResult } from '@/types';
 
@@ -31,6 +32,7 @@ const FormFillPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const downloadedTemplates = useMemo(() => {
     return templates.filter((t: FormTemplate) => t.downloaded);
@@ -39,23 +41,48 @@ const FormFillPage: React.FC = () => {
   useDidShow(() => {
     loadTemplates();
     loadFormData();
+    const session = formTracker.getCurrentSession();
+    if (session) {
+      setElapsedTime(formTracker.getElapsedTime());
+    }
   });
 
   useDidHide(() => {
     if (currentForm) {
       saveDraft();
+      formTracker.trackFieldBlur();
       console.log('[FormFill] Draft saved on page hide');
     }
   });
 
   const handleSelectTemplate = (template: FormTemplate) => {
     setCurrentTemplate(template);
-    createNewForm(template.id);
+    const newForm = createNewForm(template.id);
     setErrors({});
+    setElapsedTime(0);
+
+    if (newForm) {
+      formTracker.startForm(
+        newForm.id,
+        template.id,
+        template.name,
+        networkStatus
+      );
+    }
   };
+
+  const handleFieldFocus = useCallback((field: FormFieldType) => {
+    formTracker.trackFieldFocus(field.id, field.label, field.type);
+  }, []);
+
+  const handleFieldBlur = useCallback(() => {
+    formTracker.trackFieldBlur();
+  }, []);
 
   const handleFieldChange = (fieldId: string, value: string | string[] | number) => {
     updateField(fieldId, value);
+    formTracker.trackFieldEdit(fieldId, value);
+
     if (errors[fieldId]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -115,6 +142,11 @@ const FormFillPage: React.FC = () => {
       setErrors(validation.errors);
       const firstError = Object.values(validation.errors)[0];
       showValidationError(firstError);
+
+      Object.entries(validation.errors).forEach(([fieldId, errorMsg]) => {
+        formTracker.trackFieldError(fieldId, errorMsg);
+      });
+
       console.error('[FormFill] Validation failed:', validation.errors);
       return;
     }
@@ -122,6 +154,7 @@ const FormFillPage: React.FC = () => {
     try {
       submitForm();
       refreshStats();
+      formTracker.completeForm();
 
       Taro.showModal({
         title: '提交成功',
@@ -238,6 +271,8 @@ const FormFillPage: React.FC = () => {
               value={currentForm?.fields[field.id] || ''}
               error={errors[field.id]}
               onChange={(value) => handleFieldChange(field.id, value)}
+              onFocus={() => handleFieldFocus(field)}
+              onBlur={handleFieldBlur}
             />
           ))}
         </View>

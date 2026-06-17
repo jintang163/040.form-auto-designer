@@ -105,3 +105,95 @@ export interface ValidationResult {
   valid: boolean;
   errors: Record<string, string>;
 }
+
+export type TrackEventType = 
+  | 'form_start' 
+  | 'form_complete' 
+  | 'form_abandon' 
+  | 'field_focus' 
+  | 'field_blur' 
+  | 'field_edit' 
+  | 'field_error' 
+  | 'save_draft' 
+  | 'submit_form';
+
+export interface FieldTrackEvent {
+  fieldId: string;
+  fieldLabel: string;
+  fieldType: FieldType;
+  focusAt?: number;
+  blurAt?: number;
+  duration?: number;
+  editCount?: number;
+  hasError?: boolean;
+  errorMessage?: string;
+  value?: string | string[] | number;
+}
+
+export interface FormTrackSession {
+  id: string;
+  formId: string;
+  templateId: string;
+  templateName: string;
+  startTime: number;
+  endTime?: number;
+  totalDuration?: number;
+  status: 'in_progress' | 'completed' | 'abandoned';
+  fieldEvents: FieldTrackEvent[];
+  networkStatus: NetworkStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FormPerformanceStats {
+  templateId: string;
+  templateName: string;
+  totalForms: number;
+  completedForms: number;
+  abandonedForms: number;
+  abandonmentRate: number;
+  avgCompletionTime: number;
+  medianCompletionTime: number;
+  minCompletionTime: number;
+  maxCompletionTime: number;
+  fieldStats: Record<string, FieldPerformanceStats>;
+  lastUpdated: string;
+}
+
+export interface FieldPerformanceStats {
+  fieldId: string;
+  fieldLabel: string;
+  fieldType: FieldType;
+  totalInteractions: number;
+  avgDuration: number;
+  medianDuration: number;
+  errorRate: number;
+  totalErrors: number;
+  editCount: number;
+  abandonmentCount: number;
+}
+
+export interface OptimizationSuggestion {
+  id: string;
+  type: 'field' | 'form' | 'flow';
+  severity: 'low' | 'medium' | 'high';
+  title: string;
+  description: string;
+  suggestion: string;
+  affectedFields?: string[];
+  metricName: string;
+  currentValue: number;
+  threshold: number;
+  createdAt: string;
+}
+
+export interface FormAnalyticsData {
+  overview: {
+    totalForms: number;
+    completionRate: number;
+    avgTime: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  templateStats: FormPerformanceStats[];
+  suggestions: OptimizationSuggestion[];
+}

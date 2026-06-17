@@ -1,0 +1,802 @@
+@use '@/styles/variables.scss' as *;
+
+.analyticsPage {
+  min-height: 100vh;
+  background: $color-bg-page;
+  display: flex;
+  flex-direction: column;
+}
+
+.pageHeader {
+  padding: $spacing-xl $page-padding $spacing-lg;
+  background: $gradient-primary;
+  color: white;
+}
+
+.pageTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.pageSubTitle {
+  font-size: $font-size-sm;
+  opacity: 0.8;
+  display: block;
+}
+
+.tabBar {
+  display: flex;
+  background: white;
+  padding: 0 $spacing-md;
+  border-bottom: 1px solid $color-border;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.tabItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.activeTab {
+  .tabLabel {
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.tabIcon {
+  font-size: $font-size-xl;
+  margin-bottom: $spacing-xs;
+}
+
+.tabLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  transition: color 0.3s ease;
+}
+
+.tabIndicator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 6rpx;
+  background: $color-primary;
+  border-radius: 3rpx;
+}
+
+.contentScroll {
+  flex: 1;
+  padding: $spacing-md $page-padding $spacing-2xl;
+}
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: $spacing-3xl 0;
+}
+
+.loadingText {
+  color: $color-text-secondary;
+  font-size: $font-size-base;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-4xl $spacing-xl;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 120rpx;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-lg;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.emptySubText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+.overview {
+  .statsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
+  }
+
+  .statCard {
+    background: white;
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: $shadow-card;
+  }
+
+  .statIcon {
+    font-size: $font-size-xxl;
+    margin-bottom: $spacing-sm;
+  }
+
+  .statValue {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  .statLabel {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+}
+
+.section {
+  background: white;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.actionRow {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.actionBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-lg;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.danger {
+    background: rgba($color-error, 0.08);
+  }
+}
+
+.actionIcon {
+  font-size: $font-size-xl;
+  margin-bottom: $spacing-xs;
+}
+
+.actionText {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.rankingList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.rankingItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+}
+
+.rank {
+  width: 48rpx;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  text-align: center;
+  color: $color-text-tertiary;
+
+  &.topRank {
+    font-size: $font-size-xl;
+  }
+}
+
+.rankInfo {
+  flex: 1;
+  margin: 0 $spacing-md;
+}
+
+.rankName {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.rankStats {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  display: block;
+}
+
+.rankBadge {
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+
+  &.success {
+    background: rgba($color-success, 0.1);
+    color: $color-success;
+  }
+
+  &.danger {
+    background: rgba($color-error, 0.1);
+    color: $color-error;
+  }
+}
+
+.noData {
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  padding: $spacing-xl 0;
+  display: block;
+}
+
+.templateList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.templateCard {
+  background: white;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.templateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.templateName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.statusBadge {
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+
+  &.success {
+    background: rgba($color-success, 0.1);
+    color: $color-success;
+  }
+
+  &.danger {
+    background: rgba($color-error, 0.1);
+    color: $color-error;
+  }
+}
+
+.templateStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+}
+
+.templateStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.statNum {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.statName {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.templateFooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+}
+
+.arrowText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  margin-right: $spacing-xs;
+}
+
+.arrowIcon {
+  font-size: $font-size-lg;
+  color: $color-primary;
+  font-weight: $font-weight-bold;
+}
+
+.templateDetail {
+  .backBtn {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm 0;
+    margin-bottom: $spacing-md;
+  }
+
+  .backIcon {
+    font-size: $font-size-xxl;
+    color: $color-primary;
+    margin-right: $spacing-xs;
+    line-height: 1;
+  }
+
+  .backText {
+    font-size: $font-size-base;
+    color: $color-primary;
+  }
+
+  .detailHeader {
+    margin-bottom: $spacing-lg;
+  }
+
+  .detailTitle {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    display: block;
+    margin-bottom: $spacing-xs;
+  }
+
+  .detailUpdate {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    display: block;
+  }
+
+  .detailStats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-sm;
+    padding: $spacing-lg;
+    background: $color-bg-hover;
+    border-radius: $radius-md;
+    margin-bottom: $spacing-lg;
+  }
+
+  .detailStatItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .detailStatValue {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  .detailStatLabel {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  .timeDistribution {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-sm;
+  }
+
+  .timeItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: $spacing-md;
+    background: $color-bg-hover;
+    border-radius: $radius-md;
+  }
+
+  .timeLabel {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
+  }
+
+  .timeValue {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+
+    &.highlight {
+      color: $color-primary;
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  .fieldList {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  .fieldItem {
+    padding: $spacing-md;
+    background: $color-bg-hover;
+    border-radius: $radius-md;
+  }
+
+  .fieldHeader {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: $spacing-sm;
+  }
+
+  .fieldName {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    margin-right: $spacing-xs;
+  }
+
+  .fieldType {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  .fieldStats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm;
+  }
+
+  .fieldStatRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .fieldStatLabel {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  .fieldStatValue {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  .fieldWarning {
+    display: flex;
+    align-items: center;
+    margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: rgba($color-warning, 0.1);
+    border-radius: $radius-sm;
+  }
+
+  .warningIcon {
+    font-size: $font-size-base;
+    margin-right: $spacing-sm;
+  }
+
+  .warningText {
+    font-size: $font-size-xs;
+    color: $color-warning;
+  }
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.suggestionSection {
+  margin-bottom: $spacing-lg;
+}
+
+.suggestionSectionTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.suggestionCard {
+  background: white;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  border-left: 6rpx solid transparent;
+
+  &:global(.high) {
+    border-left-color: $color-error;
+  }
+
+  &:global(.medium) {
+    border-left-color: $color-warning;
+  }
+
+  &:global(.low) {
+    border-left-color: $color-info;
+  }
+}
+
+.suggestionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.severityBadge {
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+
+  &.high {
+    background: rgba($color-error, 0.1);
+  }
+
+  &.medium {
+    background: rgba($color-warning, 0.1);
+  }
+
+  &.low {
+    background: rgba($color-info, 0.1);
+  }
+}
+
+.suggestionType {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.suggestionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.suggestionDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.suggestionBox {
+  background: rgba($color-primary, 0.08);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.suggestionBoxTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-primary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.suggestionBoxText {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: 1.6;
+  display: block;
+}
+
+.suggestionMetrics {
+  display: flex;
+  gap: $spacing-lg;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+}
+
+.metricItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.metricLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+}
+
+.metricValue {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.sessionCard {
+  background: white;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.sessionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.sessionTemplate {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.sessionStatus {
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+
+  &.success {
+    background: rgba($color-success, 0.1);
+    color: $color-success;
+  }
+
+  &.danger {
+    background: rgba($color-error, 0.1);
+    color: $color-error;
+  }
+}
+
+.sessionInfo {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.sessionInfoItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.sessionInfoLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+}
+
+.sessionInfoValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.sessionFields {
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+}
+
+.sessionFieldsTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.sessionFieldsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.sessionFieldItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-hover;
+  border-radius: $radius-sm;
+}
+
+.sessionFieldName {
+  font-size: $font-size-xs;
+  color: $color-text-primary;
+}
+
+.sessionFieldStats {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.dangerText {
+  color: $color-error !important;
+}
+
+.success {
+  color: $color-success;
+}
+
+.danger {
+  color: $color-error;
+}
+
+.high {
+  background: rgba($color-error, 0.1);
+}
+
+.medium {
+  background: rgba($color-warning, 0.1);
+}
+
+.low {
+  background: rgba($color-info, 0.1);
+}

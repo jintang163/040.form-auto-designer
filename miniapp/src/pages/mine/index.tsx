@@ -56,10 +56,10 @@ const MinePage: React.FC = () => {
     },
     {
       icon: '📊',
-      title: '数据统计',
-      desc: '查看详细数据报表',
-      type: 'default',
-      action: () => Taro.showToast({ title: '数据统计', icon: 'none' })
+      title: '表单分析',
+      desc: '性能监控与优化建议',
+      type: 'success',
+      action: () => Taro.navigateTo({ url: '/pages/analytics/index' })
     },
     {
       icon: '❓',

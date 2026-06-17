@@ -6,6 +6,7 @@ import { useUserStore } from '@/store/useUserStore';
 import { useSyncStore } from '@/store/useSyncStore';
 import { templateStorage } from '@/utils/storage';
 import { initializeTemplates } from '@/data/mockTemplates';
+import { initializeMockAnalytics } from '@/data/mockAnalytics';
 
 function App(props) {
   const { loadTemplates, loadFormData } = useFormStore();
@@ -19,6 +20,8 @@ function App(props) {
       templateStorage.save(initialTemplates);
       console.log('[App] Initial templates loaded');
     }
+
+    initializeMockAnalytics();
 
     loadTemplates();
     loadFormData();

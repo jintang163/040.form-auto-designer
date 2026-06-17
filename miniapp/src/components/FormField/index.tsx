@@ -10,10 +10,12 @@ interface FormFieldProps {
   value: string | string[] | number;
   error?: string;
   onChange: (value: string | string[] | number) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   disabled?: boolean;
 }
 
-const FormField: React.FC<FormFieldProps> = ({ field, value, error, onChange, disabled = false }) => {
+const FormField: React.FC<FormFieldProps> = ({ field, value, error, onChange, onFocus, onBlur, disabled = false }) => {
   const [focused, setFocused] = useState(false);
 
   const handleInputChange = (e: any) => {
@@ -24,6 +26,16 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, error, onChange, di
   const handleCheckboxChange = (e: any) => {
     const val = e.detail?.value ?? [];
     onChange(val);
+  };
+
+  const handleFocus = () => {
+    setFocused(true);
+    onFocus?.();
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    onBlur?.();
   };
 
   const renderField = () => {
@@ -37,8 +49,8 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, error, onChange, di
             value={String(value || '')}
             placeholder={field.placeholder}
             onInput={handleInputChange}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             maxlength={field.maxLength}
             disabled={disabled}
           />
@@ -51,8 +63,8 @@ const FormField: React.FC<FormFieldProps> = ({ field, value, error, onChange, di
             value={String(value || '')}
             placeholder={field.placeholder}
             onInput={handleInputChange}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             maxlength={field.maxLength}
             disabled={disabled}
             autoHeight
