@@ -38,4 +38,8 @@ public interface FormDataMapper {
                                         @Param("tenantId") Long tenantId);
 
     int deleteById(@Param("id") Long id);
+
+    int updateStatus(@Param("id") Long id, @Param("status") String status);
+
+    int updateFieldValues(@Param("id") Long id, @Param("fieldValuesJson") String fieldValuesJson);
 }

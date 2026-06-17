@@ -8,6 +8,7 @@ import {
   ThunderboltOutlined,
   SafetyOutlined,
   EnvironmentOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import {
   templateApi,
@@ -16,9 +17,11 @@ import {
   recommendApi,
   aiRecommendApi,
   validationApi,
+  workflowApi,
 } from '@/services/api';
 import { generateFormSchema } from '@/utils/schemaTransform';
 import SmartSchemaPreview, { type SmartSchemaPreviewRef } from '@/components/SmartSchemaPreview';
+import WorkflowApproval from '@/components/WorkflowApproval';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import type {
   FormField,
@@ -61,16 +64,21 @@ export default function TemplatePreview() {
   const [contextRecLoading, setContextRecLoading] = useState(false);
   const [enableSmartValidation, setEnableSmartValidation] = useState(true);
   const [enableAddressComplete, setEnableAddressComplete] = useState(true);
+  const [submittedFormDataId, setSubmittedFormDataId] = useState<string | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<string>('');
+  const [showApprovalPanel, setShowApprovalPanel] = useState(false);
+  const [hasWorkflow, setHasWorkflow] = useState(false);
 
   const fieldMapRef = useRef<Record<string, FormField>>({});
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    Promise.all([templateApi.getTemplate(id), fieldApi.getFields(id)])
-      .then(([template, fs]) => {
+    Promise.all([templateApi.getTemplate(id), fieldApi.getFields(id), workflowApi.getProcessByTemplateId(id)])
+      .then(([template, fs, wfProcess]) => {
         setTemplateName(template.name);
         setFields(fs);
+        setHasWorkflow(!!wfProcess);
         const map: Record<string, FormField> = {};
         fs.forEach((f) => {
           map[f.fieldName] = f;
@@ -237,10 +245,15 @@ export default function TemplatePreview() {
     }
 
     try {
-      await formDataApi.submitFormData(id, values, submitterId.current);
-      message.success('提交成功');
+      const result = await formDataApi.submitFormData(id, values, submitterId.current);
+      message.success(hasWorkflow ? '提交成功，已进入审批流程' : '提交成功');
       loadRecommendations();
       formValuesRef.current = {};
+
+      if (hasWorkflow && result?.id) {
+        setSubmittedFormDataId(String(result.id));
+        setShowApprovalPanel(true);
+      }
     } catch (e: any) {
       message.error(e.message);
     }
@@ -312,7 +325,33 @@ export default function TemplatePreview() {
           gap: 12,
         }}
       >
-        <h3 style={{ margin: 0 }}>{templateName} - 表单预览</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>{templateName} - 表单预览</h3>
+          {hasWorkflow && (
+            <Tag color="processing" icon={<AuditOutlined />}>
+              已配置审批流程
+            </Tag>
+          )}
+          {workflowStatus && (
+            <Tag
+              color={
+                workflowStatus === 'APPROVED'
+                  ? 'success'
+                  : workflowStatus === 'REJECTED'
+                  ? 'error'
+                  : 'processing'
+              }
+            >
+              {workflowStatus === 'RUNNING'
+                ? '审批中'
+                : workflowStatus === 'APPROVED'
+                ? '已通过'
+                : workflowStatus === 'REJECTED'
+                ? '已驳回'
+                : workflowStatus}
+            </Tag>
+          )}
+        </div>
         <Space>
           <Tooltip title={`提交人ID: ${submitterId.current}`}>
             <Tag icon={<UserOutlined />}>
@@ -602,6 +641,17 @@ export default function TemplatePreview() {
           </div>
         )}
       </div>
+
+      {showApprovalPanel && submittedFormDataId && hasWorkflow && (
+        <div style={{ marginTop: 24 }}>
+          <WorkflowApproval
+            formDataId={submittedFormDataId}
+            templateId={id}
+            currentUserId={submitterId.current}
+            onStatusChange={setWorkflowStatus}
+          />
+        </div>
+      )}
     </div>
   );
 }

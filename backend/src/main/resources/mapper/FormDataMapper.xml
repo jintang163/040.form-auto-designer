@@ -62,4 +62,12 @@
         DELETE FROM form_data WHERE id = #{id}
     </delete>
 
+    <update id="updateStatus">
+        UPDATE form_data SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateFieldValues">
+        UPDATE form_data SET field_values_json = #{fieldValuesJson} WHERE id = #{id}
+    </update>
+
 </mapper>

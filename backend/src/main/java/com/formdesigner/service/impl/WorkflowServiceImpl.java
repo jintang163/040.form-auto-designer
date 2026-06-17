@@ -12,6 +12,7 @@ import com.formdesigner.mapper.WorkflowInstanceMapper;
 import com.formdesigner.mapper.WorkflowProcessMapper;
 import com.formdesigner.mapper.WorkflowTaskMapper;
 import com.formdesigner.service.WorkflowService;
+import com.formdesigner.service.FormDataService;
 import com.formdesigner.vo.WorkflowInstanceVO;
 import com.formdesigner.vo.WorkflowProcessVO;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class WorkflowServiceImpl implements WorkflowService {
     private final WorkflowProcessMapper processMapper;
     private final WorkflowInstanceMapper instanceMapper;
     private final WorkflowTaskMapper taskMapper;
+    private final FormDataService formDataService;
     private final ObjectMapper objectMapper;
 
     private Long currentTenantId() {
@@ -175,6 +177,12 @@ public class WorkflowServiceImpl implements WorkflowService {
             taskMapper.insert(wfTask);
         }
 
+        try {
+            formDataService.updateStatus(dto.getFormDataId(), "APPROVING");
+        } catch (Exception e) {
+            log.warn("更新表单数据状态为审批中失败: {}", e.getMessage());
+        }
+
         log.info("流程已启动: processInstanceId={}, formDataId={}", processInstance.getId(), dto.getFormDataId());
         return toInstanceVO(instance);
     }
@@ -198,11 +206,23 @@ public class WorkflowServiceImpl implements WorkflowService {
             taskService.addComment(dto.getTaskId(), task.getProcessInstanceId(), "APPROVE", dto.getComment());
         }
 
+        WorkflowInstance instance = instanceMapper.selectByProcessInstanceId(task.getProcessInstanceId());
+        if (instance != null && dto.getFormData() != null && !dto.getFormData().isEmpty()) {
+            try {
+                String fieldValuesJson = objectMapper.writeValueAsString(dto.getFormData());
+                formDataService.updateFieldValues(instance.getFormDataId(), fieldValuesJson);
+
+                syncFormVariables(instance.getFormDataId(), dto.getFormData());
+                log.info("审批时更新表单数据和流程变量: formDataId={}", instance.getFormDataId());
+            } catch (Exception e) {
+                log.warn("审批时更新表单数据失败: {}", e.getMessage());
+            }
+        }
+
         taskService.complete(dto.getTaskId(), variables);
 
         taskMapper.updateAction(dto.getTaskId(), "APPROVE", dto.getComment());
 
-        WorkflowInstance instance = instanceMapper.selectByProcessInstanceId(task.getProcessInstanceId());
         if (instance != null) {
             updateInstanceStatus(instance);
         }
@@ -226,16 +246,32 @@ public class WorkflowServiceImpl implements WorkflowService {
             taskService.addComment(dto.getTaskId(), task.getProcessInstanceId(), "REJECT", dto.getComment());
         }
 
+        WorkflowInstance instance = instanceMapper.selectByProcessInstanceId(task.getProcessInstanceId());
+        if (instance != null && dto.getFormData() != null && !dto.getFormData().isEmpty()) {
+            try {
+                String fieldValuesJson = objectMapper.writeValueAsString(dto.getFormData());
+                formDataService.updateFieldValues(instance.getFormDataId(), fieldValuesJson);
+                log.info("驳回时更新表单数据: formDataId={}", instance.getFormDataId());
+            } catch (Exception e) {
+                log.warn("驳回时更新表单数据失败: {}", e.getMessage());
+            }
+        }
+
         taskService.complete(dto.getTaskId(), variables);
 
         taskMapper.updateAction(dto.getTaskId(), "REJECT", dto.getComment());
 
-        WorkflowInstance instance = instanceMapper.selectByProcessInstanceId(task.getProcessInstanceId());
         if (instance != null) {
             instance.setStatus("REJECTED");
             instance.setEndTime(LocalDateTime.now());
             instance.setOutcome("REJECTED");
             instanceMapper.update(instance);
+
+            try {
+                formDataService.updateStatus(instance.getFormDataId(), "REJECTED");
+            } catch (Exception e) {
+                log.warn("更新表单数据状态为驳回失败: {}", e.getMessage());
+            }
         }
 
         return instance != null ? toInstanceVO(instance) : null;
@@ -345,16 +381,14 @@ public class WorkflowServiceImpl implements WorkflowService {
                 "xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"http://formdesigner.com/workflow\">\n");
 
         xml.append("  <process id=\"").append(processKey).append("\" name=\"").append(processName).append("\" isExecutable=\"true\">\n");
-        xml.append("    <startEvent id=\"startEvent\" name=\"提交申请\" />\n");
-        xml.append("    <sequenceFlow id=\"flow1\" sourceRef=\"startEvent\" targetRef=\"submitTask\" />\n");
-
-        xml.append("    <userTask id=\"submitTask\" name=\"提交表单\" flowable:assignee=\"${initiator}\" />\n");
-        xml.append("    <sequenceFlow id=\"flow2\" sourceRef=\"submitTask\" targetRef=\"gateway1\" />\n");
-
-        xml.append("    <exclusiveGateway id=\"gateway1\" name=\"审批网关\" />\n");
+        xml.append("    <startEvent id=\"startEvent\" name=\"提交申请\">\n");
+        xml.append("      <extensionElements>\n");
+        xml.append("        <flowable:executionListener event=\"start\" class=\"com.formdesigner.workflow.StartEventListener\" />\n");
+        xml.append("      </extensionElements>\n");
+        xml.append("    </startEvent>\n");
 
         if (multiInstanceType == 2) {
-            xml.append("    <sequenceFlow id=\"flow3\" sourceRef=\"gateway1\" targetRef=\"countersignTask\" />\n");
+            xml.append("    <sequenceFlow id=\"flow1\" sourceRef=\"startEvent\" targetRef=\"countersignTask\" />\n");
             xml.append("    <userTask id=\"countersignTask\" name=\"会签审批\">\n");
             xml.append("      <multiInstanceLoopCharacteristics isSequential=\"false\" " +
                     "flowable:collection=\"assigneeList\" flowable:elementVariable=\"assignee\">\n");
@@ -365,9 +399,9 @@ public class WorkflowServiceImpl implements WorkflowService {
                     "class=\"com.formdesigner.workflow.AssigneeTaskListener\" />\n");
             xml.append("      </extensionElements>\n");
             xml.append("    </userTask>\n");
-            xml.append("    <sequenceFlow id=\"flow4\" sourceRef=\"countersignTask\" targetRef=\"endApproved\" />\n");
+            xml.append("    <sequenceFlow id=\"flow2\" sourceRef=\"countersignTask\" targetRef=\"endApproved\" />\n");
         } else {
-            String prevId = "gateway1";
+            String prevId = "startEvent";
             for (int i = 0; i < assignees.size(); i++) {
                 String taskId = "approveTask" + (i + 1);
                 String taskName = "第" + (i + 1) + "级审批";
@@ -378,7 +412,12 @@ public class WorkflowServiceImpl implements WorkflowService {
                         .append(prevId).append("\" targetRef=\"").append(taskId).append("\" />\n");
 
                 xml.append("    <userTask id=\"").append(taskId).append("\" name=\"").append(taskName)
-                        .append("\" flowable:assignee=\"").append(assignees.get(i)).append("\" />\n");
+                        .append("\" flowable:assignee=\"").append(assignees.get(i)).append("\">\n");
+                xml.append("      <extensionElements>\n");
+                xml.append("        <flowable:taskListener event=\"create\" " +
+                        "class=\"com.formdesigner.workflow.ApprovalTaskCreateListener\" />\n");
+                xml.append("      </extensionElements>\n");
+                xml.append("    </userTask>\n");
 
                 if (i < assignees.size() - 1) {
                     String gatewayId = "gateway_approve_" + (i + 1);
@@ -414,10 +453,6 @@ public class WorkflowServiceImpl implements WorkflowService {
         xml.append("    <endEvent id=\"endApproved\" name=\"审批通过\" />\n");
         xml.append("    <endEvent id=\"endRejected\" name=\"审批驳回\" />\n");
 
-        xml.append("    <sequenceFlow id=\"flow_reject_start\" sourceRef=\"gateway1\" targetRef=\"endRejected\">\n");
-        xml.append("      <conditionExpression>${!approved}</conditionExpression>\n");
-        xml.append("    </sequenceFlow>\n");
-
         xml.append("  </process>\n");
         xml.append("</definitions>");
 
@@ -443,6 +478,14 @@ public class WorkflowServiceImpl implements WorkflowService {
             instance.setStatus(approved ? "APPROVED" : "REJECTED");
             instance.setEndTime(LocalDateTime.now());
             instance.setOutcome(approved ? "APPROVED" : "REJECTED");
+
+            try {
+                formDataService.updateStatus(instance.getFormDataId(), approved ? "APPROVED" : "REJECTED");
+                log.info("表单数据状态已更新: formDataId={}, status={}", instance.getFormDataId(),
+                        approved ? "APPROVED" : "REJECTED");
+            } catch (Exception e) {
+                log.warn("更新表单数据状态失败: {}", e.getMessage());
+            }
         } else {
             Task currentTask = remainingTasks.get(0);
             instance.setCurrentAssignee(currentTask.getAssignee());

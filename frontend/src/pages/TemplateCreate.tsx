@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useFormStore } from '@/store/formStore';
-import { templateApi, fileApi, recognitionApi, fieldApi } from '@/services/api';
+import { templateApi, fileApi, recognitionApi, fieldApi, workflowApi } from '@/services/api';
 import { recognitionResultToFormSchema, generateFormSchema } from '@/utils/schemaTransform';
 import FieldEditor from '@/components/FieldEditor';
 import SchemaPreview from '@/components/SchemaPreview';
@@ -25,6 +25,7 @@ import RecognitionProgress from '@/components/RecognitionProgress';
 import VersionManagerPanel from '@/components/VersionManagerPanel';
 import OcrImageUploader from '@/components/OcrImageUploader';
 import LinkageRuleConfig from '@/components/LinkageRuleConfig';
+import WorkflowDeploy from '@/components/WorkflowDeploy';
 import type { FieldConfig, FormField, RecognitionResult, FormSchema, RollbackResult, OcrFieldItem } from '@/types';
 
 function SortableFieldItem({ field, selected, onClick, onDelete }: {
@@ -411,6 +412,14 @@ export default function TemplateCreate() {
                 </Form.Item>
               </Form>
             </Card>
+            {isEdit && id && (
+              <div style={{ marginTop: 16 }}>
+                <WorkflowDeploy
+                  templateId={id}
+                  templateName={currentTemplate?.name}
+                />
+              </div>
+            )}
           </Col>
         </Row>
       )}

@@ -206,4 +206,14 @@ public class FormDataServiceImpl implements FormDataService {
     public boolean deleteById(Long id) {
         return formDataMapper.deleteById(id) > 0;
     }
+
+    @Override
+    public boolean updateStatus(Long id, String status) {
+        return formDataMapper.updateStatus(id, status) > 0;
+    }
+
+    @Override
+    public boolean updateFieldValues(Long id, String fieldValuesJson) {
+        return formDataMapper.updateFieldValues(id, fieldValuesJson) > 0;
+    }
 }

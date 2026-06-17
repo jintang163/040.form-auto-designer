@@ -21,4 +21,8 @@ public interface FormDataService {
                      HttpServletResponse response);
 
     boolean deleteById(Long id);
+
+    boolean updateStatus(Long id, String status);
+
+    boolean updateFieldValues(Long id, String fieldValuesJson);
 }
