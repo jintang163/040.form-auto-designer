@@ -1,12 +1,15 @@
-import { useEffect } from 'react';
-import { Form, Input, Select, Switch, InputNumber, Button, Space, Card, Divider, Tag, Alert } from 'antd';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import type { FieldConfig, InputType, ValidationRule } from '@/types';
+import { useEffect, useState } from 'react';
+import { Form, Input, Select, Switch, InputNumber, Button, Space, Card, Divider, Tag, Alert, Tabs } from 'antd';
+import { MinusCircleOutlined, PlusOutlined, GlobalOutlined } from '@ant-design/icons';
+import type { FieldConfig, InputType, ValidationRule, LanguageCode } from '@/types';
+import { LANGUAGE_OPTIONS } from '@/types';
+import { fieldApi } from '@/services/api';
 
 interface FieldEditorProps {
   field: FieldConfig;
   onChange: (data: Partial<FieldConfig>) => void;
   allFields?: FieldConfig[];
+  templateId?: string;
 }
 
 const inputTypeOptions: { label: string; value: InputType }[] = [
@@ -25,15 +28,45 @@ const validationTypeOptions: { label: string; value: ValidationRule['type'] }[] 
   { label: '自定义', value: 'custom' },
 ];
 
-export default function FieldEditor({ field, onChange, allFields }: FieldEditorProps) {
+export default function FieldEditor({ field, onChange, allFields, templateId }: FieldEditorProps) {
   const [form] = Form.useForm();
+  const [enLabel, setEnLabel] = useState<string>('');
+  const [savingI18n, setSavingI18n] = useState(false);
 
   useEffect(() => {
     form.setFieldsValue(field);
+    const labelI18n = (field as any).fieldLabelI18n;
+    if (labelI18n && typeof labelI18n === 'object') {
+      setEnLabel(labelI18n['en-US'] || '');
+    }
   }, [field, form]);
 
   const handleValuesChange = (_: any, allValues: any) => {
     onChange(allValues);
+  };
+
+  const handleSaveI18n = async () => {
+    if (!templateId || !field.fieldName) {
+      return;
+    }
+    setSavingI18n(true);
+    try {
+      const labels: Record<string, string> = {
+        [field.fieldName]: enLabel,
+      };
+      await fieldApi.saveFieldLabelsI18n(templateId, 'en-US', labels);
+      onChange({
+        ...field,
+        fieldLabelI18n: {
+          ...((field as any).fieldLabelI18n || {}),
+          'en-US': enLabel,
+        },
+      } as any);
+    } catch (e: any) {
+      console.error('保存多语言标签失败:', e);
+    } finally {
+      setSavingI18n(false);
+    }
   };
 
   const fieldOptions = (allFields || [])
@@ -64,6 +97,72 @@ export default function FieldEditor({ field, onChange, allFields }: FieldEditorP
         <Form.Item name="defaultValue" label="默认值">
           <Input />
         </Form.Item>
+      </Card>
+
+      <Card
+        title={
+          <Space>
+            <GlobalOutlined />
+            <span>多语言标签</span>
+          </Space>
+        }
+        size="small"
+        style={{ marginTop: 12 }}
+      >
+        <Alert
+          type="info"
+          showIcon
+          message="配置中英文标签，用户切换语言后表单自动翻译"
+          style={{ marginBottom: 12 }}
+        />
+        <Tabs
+          size="small"
+          items={LANGUAGE_OPTIONS.map((opt) => ({
+            key: opt.code,
+            label: (
+              <Space size={4}>
+                <span>{opt.flag}</span>
+                <span>{opt.name}</span>
+              </Space>
+            ),
+            children:
+              opt.code === 'zh-CN' ? (
+                <div style={{ padding: '8px 0' }}>
+                  <div style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>
+                    中文标签（与字段标签一致）
+                  </div>
+                  <Input value={field.fieldLabel} disabled />
+                </div>
+              ) : (
+                <div style={{ padding: '8px 0' }}>
+                  <div style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>
+                    英文标签
+                  </div>
+                  <Input
+                    value={enLabel}
+                    onChange={(e) => setEnLabel(e.target.value)}
+                    placeholder="请输入英文标签"
+                  />
+                  {templateId && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      style={{ marginTop: 8 }}
+                      onClick={handleSaveI18n}
+                      loading={savingI18n}
+                    >
+                      保存英文标签
+                    </Button>
+                  )}
+                  {!templateId && (
+                    <div style={{ color: '#faad14', fontSize: 12, marginTop: 8 }}>
+                      请先保存模板后再配置多语言标签
+                    </div>
+                  )}
+                </div>
+              ),
+          }))}
+        />
       </Card>
 
       {(field.inputType === 'select' || field.inputType === 'multiSelect') && (

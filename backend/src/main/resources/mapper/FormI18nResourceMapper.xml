@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FormI18nResourceMapper">
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FormI18nResource" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_i18n_resource (resource_key, language, resource_value, resource_type, template_id, field_name, tenant_id, created_at, updated_at)
+        VALUES (#{resourceKey}, #{language}, #{resourceValue}, #{resourceType}, #{templateId}, #{fieldName}, #{tenantId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="com.formdesigner.entity.FormI18nResource">
+        UPDATE form_i18n_resource
+        SET resource_value = #{resourceValue},
+            resource_type = #{resourceType},
+            template_id = #{templateId},
+            field_name = #{fieldName},
+            updated_at = #{updatedAt}
+        WHERE resource_key = #{resourceKey} AND language = #{language} AND tenant_id = #{tenantId}
+    </update>
+
+    <select id="selectByKeyAndLanguage" resultType="com.formdesigner.entity.FormI18nResource">
+        SELECT id, resource_key, language, resource_value, resource_type, template_id, field_name, tenant_id, created_at, updated_at
+        FROM form_i18n_resource
+        WHERE resource_key = #{resourceKey} AND language = #{language} AND tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormI18nResource">
+        SELECT id, resource_key, language, resource_value, resource_type, template_id, field_name, tenant_id, created_at, updated_at
+        FROM form_i18n_resource
+        WHERE template_id = #{templateId} AND tenant_id = #{tenantId}
+        ORDER BY language, resource_key
+    </select>
+
+    <select id="selectByTemplateIdAndLanguage" resultType="com.formdesigner.entity.FormI18nResource">
+        SELECT id, resource_key, language, resource_value, resource_type, template_id, field_name, tenant_id, created_at, updated_at
+        FROM form_i18n_resource
+        WHERE template_id = #{templateId} AND language = #{language} AND tenant_id = #{tenantId}
+        ORDER BY resource_key
+    </select>
+
+    <select id="selectByLanguage" resultType="com.formdesigner.entity.FormI18nResource">
+        SELECT id, resource_key, language, resource_value, resource_type, template_id, field_name, tenant_id, created_at, updated_at
+        FROM form_i18n_resource
+        WHERE language = #{language} AND tenant_id = #{tenantId}
+    </select>
+
+    <delete id="deleteByKeyAndLanguage">
+        DELETE FROM form_i18n_resource
+        WHERE resource_key = #{resourceKey} AND language = #{language} AND tenant_id = #{tenantId}
+    </delete>
+
+    <delete id="deleteByTemplateId">
+        DELETE FROM form_i18n_resource
+        WHERE template_id = #{templateId} AND tenant_id = #{tenantId}
+    </delete>
+
+</mapper>

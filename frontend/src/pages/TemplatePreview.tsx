@@ -25,6 +25,8 @@ import SmartSchemaPreview, { type SmartSchemaPreviewRef } from '@/components/Sma
 import WorkflowApproval from '@/components/WorkflowApproval';
 import FormShareModal from '@/components/FormShareModal';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useI18n } from '@/contexts/I18nContext';
 import type {
   FormField,
   FormSchema,
@@ -52,6 +54,7 @@ export default function TemplatePreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const schemaPreviewRef = useRef<SmartSchemaPreviewRef>(null);
+  const { language, loadTranslations } = useI18n();
   const [schema, setSchema] = useState<FormSchema>({ type: 'object', properties: {} });
   const [loading, setLoading] = useState(true);
   const [templateName, setTemplateName] = useState('');
@@ -74,34 +77,45 @@ export default function TemplatePreview() {
 
   const fieldMapRef = useRef<Record<string, FormField>>({});
 
-  useEffect(() => {
+  const loadTemplateData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    Promise.all([templateApi.getTemplate(id), fieldApi.getFields(id), workflowApi.getProcessByTemplateId(id)])
-      .then(([template, fs, wfProcess]) => {
-        setTemplateName(template.name);
-        setFields(fs);
-        setHasWorkflow(!!wfProcess);
-        const map: Record<string, FormField> = {};
-        fs.forEach((f) => {
-          map[f.fieldName] = f;
-        });
-        fieldMapRef.current = map;
-        const s = generateFormSchema(fs.map((f) => ({ ...f })));
-        try {
-          const saved = JSON.parse(template.schemaJson);
-          if (saved?.properties && Object.keys(saved.properties).length > 0) {
-            setSchema(saved);
-          } else {
-            setSchema(s);
-          }
-        } catch {
+    try {
+      const [template, fs, wfProcess] = await Promise.all([
+        templateApi.getTemplate(id),
+        fieldApi.getFieldsWithTranslation(id, language),
+        workflowApi.getProcessByTemplateId(id),
+      ]);
+      setTemplateName(template.name);
+      setFields(fs);
+      setHasWorkflow(!!wfProcess);
+      const map: Record<string, FormField> = {};
+      fs.forEach((f) => {
+        map[f.fieldName] = f;
+      });
+      fieldMapRef.current = map;
+      const s = generateFormSchema(fs.map((f) => ({ ...f })));
+      try {
+        const saved = JSON.parse(template.schemaJson);
+        if (saved?.properties && Object.keys(saved.properties).length > 0) {
+          setSchema(saved);
+        } else {
           setSchema(s);
         }
-      })
-      .catch((e) => message.error(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+      } catch {
+        setSchema(s);
+      }
+      await loadTranslations(id);
+    } catch (e: any) {
+      message.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, language, loadTranslations]);
+
+  useEffect(() => {
+    loadTemplateData();
+  }, [loadTemplateData]);
 
   const loadRecommendations = useCallback(() => {
     if (!id) return;
@@ -356,6 +370,7 @@ export default function TemplatePreview() {
           )}
         </div>
         <Space>
+          <LanguageSwitcher />
           <Tooltip title={`提交人ID: ${submitterId.current}`}>
             <Tag icon={<UserOutlined />}>
               用户: {submitterId.current.slice(0, 8)}...

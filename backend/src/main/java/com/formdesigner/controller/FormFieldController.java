@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/fields")
@@ -35,6 +36,22 @@ public class FormFieldController {
     @GetMapping("/template/{templateId}")
     public R<List<FormField>> listByTemplateId(@PathVariable Long templateId) {
         return R.ok(formFieldService.listByTemplateId(templateId));
+    }
+
+    @GetMapping("/template/{templateId}/translate")
+    public R<List<FormField>> listByTemplateIdWithTranslation(
+            @PathVariable Long templateId,
+            @RequestParam String language) {
+        return R.ok(formFieldService.listByTemplateIdWithTranslation(templateId, language));
+    }
+
+    @PostMapping("/template/{templateId}/i18n/{language}")
+    public R<Void> saveFieldLabelsI18n(
+            @PathVariable Long templateId,
+            @PathVariable String language,
+            @RequestBody Map<String, String> labels) {
+        formFieldService.saveFieldLabelsI18n(templateId, language, labels);
+        return R.ok();
     }
 
     @DeleteMapping("/{id}")

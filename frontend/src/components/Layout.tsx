@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout as AntLayout, Menu, Breadcrumb } from 'antd';
+import { Layout as AntLayout, Menu, Breadcrumb, Space } from 'antd';
 import {
   FileTextOutlined,
   DatabaseOutlined,
@@ -11,6 +11,7 @@ import {
   AuditOutlined,
 } from '@ant-design/icons';
 import TenantSwitcher from './TenantSwitcher';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const { Sider, Header, Content } = AntLayout;
 
@@ -93,7 +94,10 @@ export default function Layout() {
       <AntLayout>
         <Header style={{ padding: '0 24px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Breadcrumb items={buildBreadcrumb(location.pathname)} />
-          <TenantSwitcher />
+          <Space size={16}>
+            <LanguageSwitcher />
+            <TenantSwitcher />
+          </Space>
         </Header>
         <Content style={{ margin: 16, padding: 24, background: '#fff', borderRadius: 8 }}>
           <Outlet />

@@ -17,4 +17,6 @@ public class FormField {
     private Integer sortOrder;
     private String layoutConfig;
     private Long tenantId;
+    private String fieldLabelI18n;
+    private String optionsI18n;
 }

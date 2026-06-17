@@ -13,6 +13,7 @@ import TenantManagement from './pages/TenantManagement';
 import ApprovalCenter from './pages/ApprovalCenter';
 import CollaborationFill from './pages/CollaborationFill';
 import { useTenantStore } from './store/tenantStore';
+import { I18nProvider } from './contexts/I18nContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useTenantStore((s) => s.isLoggedIn());
@@ -32,29 +33,31 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/share/:shareCode" element={<CollaborationFill />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/templates" replace />} />
-        <Route path="templates" element={<TemplateList />} />
-        <Route path="templates/create" element={<TemplateCreate />} />
-        <Route path="templates/:id/edit" element={<TemplateCreate />} />
-        <Route path="templates/:id/preview" element={<TemplatePreview />} />
-        <Route path="form-data" element={<FormDataList />} />
-        <Route path="form-data/:templateId" element={<FormDataDetail />} />
-        <Route path="statistics" element={<DataStatistics />} />
-        <Route path="webhook-rules" element={<WebhookRules />} />
-        <Route path="tenants" element={<TenantManagement />} />
-        <Route path="approval" element={<ApprovalCenter />} />
-      </Route>
-    </Routes>
+    <I18nProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/share/:shareCode" element={<CollaborationFill />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/templates" replace />} />
+          <Route path="templates" element={<TemplateList />} />
+          <Route path="templates/create" element={<TemplateCreate />} />
+          <Route path="templates/:id/edit" element={<TemplateCreate />} />
+          <Route path="templates/:id/preview" element={<TemplatePreview />} />
+          <Route path="form-data" element={<FormDataList />} />
+          <Route path="form-data/:templateId" element={<FormDataDetail />} />
+          <Route path="statistics" element={<DataStatistics />} />
+          <Route path="webhook-rules" element={<WebhookRules />} />
+          <Route path="tenants" element={<TenantManagement />} />
+          <Route path="approval" element={<ApprovalCenter />} />
+        </Route>
+      </Routes>
+    </I18nProvider>
   );
 }

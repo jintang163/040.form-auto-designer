@@ -517,3 +517,46 @@ export interface CollaborationMessage {
   scrollTop?: number;
   timestamp?: number;
 }
+
+export type LanguageCode = 'zh-CN' | 'en-US';
+
+export interface FormI18nResource {
+  resourceKey: string;
+  language: LanguageCode;
+  resourceValue: string;
+  resourceType: string;
+  templateId?: string;
+  fieldName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FormI18nCreateRequest {
+  templateId?: number;
+  fieldName?: string;
+  language: LanguageCode;
+  resourceKey: string;
+  resourceValue: string;
+  resourceType?: string;
+}
+
+export interface I18nContextType {
+  language: LanguageCode;
+  setLanguage: (lang: LanguageCode) => void;
+  translate: (key: string, defaultValue?: string) => string;
+  translations: Record<string, string>;
+  loadTranslations: (templateId: string, language?: LanguageCode) => Promise<void>;
+  supportedLanguages: LanguageCode[];
+}
+
+export interface LanguageOption {
+  code: LanguageCode;
+  name: string;
+  flag: string;
+}
+
+export const LANGUAGE_OPTIONS: LanguageOption[] = [
+  { code: 'zh-CN', name: '简体中文', flag: '🇨🇳' },
+  { code: 'en-US', name: 'English', flag: '🇺🇸' },
+];
+

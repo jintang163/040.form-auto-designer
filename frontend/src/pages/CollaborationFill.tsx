@@ -26,7 +26,9 @@ import { shareApi, templateApi, fieldApi, formDataApi } from '@/services/api';
 import { generateFormSchema } from '@/utils/schemaTransform';
 import SmartSchemaPreview, { type SmartSchemaPreviewRef } from '@/components/SmartSchemaPreview';
 import CollaboratorsPanel from '@/components/CollaboratorsPanel';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useCollaboration } from '@/hooks/useCollaboration';
+import { useI18n } from '@/contexts/I18nContext';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import type { FormField, FormSchema, FormShare } from '@/types';
 
@@ -35,6 +37,7 @@ export default function CollaborationFill() {
   const navigate = useNavigate();
   const schemaPreviewRef = useRef<SmartSchemaPreviewRef>(null);
   const isInitializedRef = useRef(false);
+  const { language, loadTranslations } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(true);
@@ -84,6 +87,12 @@ export default function CollaborationFill() {
       disconnect();
     };
   }, [shareCode, disconnect]);
+
+  useEffect(() => {
+    if (shareInfo && isInitializedRef.current) {
+      loadTemplate(shareInfo.templateId);
+    }
+  }, [language, shareInfo, loadTemplate]);
 
   const validateShare = async () => {
     setValidating(true);
@@ -136,12 +145,12 @@ export default function CollaborationFill() {
     }
   };
 
-  const loadTemplate = async (templateId: string) => {
+  const loadTemplate = useCallback(async (templateId: string) => {
     setLoading(true);
     try {
       const [template, fs] = await Promise.all([
         templateApi.getTemplate(templateId),
-        fieldApi.getFields(templateId),
+        fieldApi.getFieldsWithTranslation(templateId, language),
       ]);
 
       setTemplateName(template.name);
@@ -159,13 +168,15 @@ export default function CollaborationFill() {
         setSchema(s);
       }
 
+      await loadTranslations(templateId);
+
       isInitializedRef.current = false;
     } catch (e: any) {
       message.error(e.message || '加载表单失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, loadTranslations]);
 
   useEffect(() => {
     if (!connected || !schemaPreviewRef.current || isInitializedRef.current) return;
@@ -345,6 +356,7 @@ export default function CollaborationFill() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <LanguageSwitcher />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <CheckCircleOutlined style={{ color: '#52c41a' }} />
               <span style={{ fontSize: 13, color: '#666' }}>

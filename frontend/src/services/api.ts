@@ -38,6 +38,8 @@ import type {
   FormShare,
   CollaborationCursor,
   FieldLock,
+  FormI18nResource,
+  LanguageCode,
 } from '@/types';
 
 const request = axios.create({
@@ -169,6 +171,19 @@ export const fieldApi = {
       .get<any, ApiResponse<any[]>>(`/templates/${templateId}/fields`)
       .then(unwrap)
       .then((list) => list.map(mapFieldFromBackend)),
+
+  getFieldsWithTranslation: (templateId: string, language: LanguageCode) =>
+    request
+      .get<any, ApiResponse<any[]>>(`/fields/template/${templateId}/translate`, {
+        params: { language },
+      })
+      .then(unwrap)
+      .then((list) => list.map(mapFieldFromBackend)),
+
+  saveFieldLabelsI18n: (templateId: string, language: LanguageCode, labels: Record<string, string>) =>
+    request
+      .post<any, ApiResponse<void>>(`/fields/template/${templateId}/i18n/${language}`, labels)
+      .then(unwrap),
 
   updateField: (templateId: string, fieldId: string, data: Partial<FieldConfig>) =>
     request
@@ -662,4 +677,35 @@ export const shareApi = {
 
   getFieldValues: (shareCode: string) =>
     request.get<any, ApiResponse<Record<string, any>>>(`/form-share/${shareCode}/field-values`).then(unwrap),
+};
+
+export const i18nApi = {
+  translate: (key: string, language: LanguageCode, defaultValue?: string) =>
+    request
+      .get<any, ApiResponse<string>>(`/form-i18n/translate`, {
+        params: { key, language, defaultValue },
+      })
+      .then(unwrap),
+
+  saveTranslation: (templateId: number, fieldName: string, language: LanguageCode, resourceKey: string, resourceValue: string) =>
+    request
+      .post<any, ApiResponse<void>>(`/form-i18n`, { templateId, fieldName, language, resourceKey, resourceValue })
+      .then(unwrap),
+
+  getTranslations: (templateId: string, language: LanguageCode) =>
+    request
+      .get<any, ApiResponse<Record<string, string>>>(`/form-i18n/template/${templateId}/${language}`)
+      .then(unwrap),
+
+  saveBatchTranslations: (templateId: string, language: LanguageCode, translations: Record<string, string>) =>
+    request
+      .post<any, ApiResponse<void>>(`/form-i18n/template/${templateId}/${language}/batch`, translations)
+      .then(unwrap),
+
+  getResources: (templateId?: string, resourceType?: string) =>
+    request
+      .get<any, ApiResponse<FormI18nResource[]>>(`/form-i18n/resources`, {
+        params: { templateId, resourceType },
+      })
+      .then(unwrap),
 };

@@ -489,3 +489,65 @@ CREATE INDEX idx_form_share_template_id ON form_share (template_id);
 CREATE INDEX idx_form_share_tenant_id ON form_share (tenant_id);
 CREATE INDEX idx_form_share_created_by ON form_share (created_by);
 CREATE INDEX idx_form_share_expire_at ON form_share (expire_at);
+
+-- ============================================================
+-- 14. 多语言资源表 form_i18n_resource
+-- ============================================================
+CREATE TABLE IF NOT EXISTS form_i18n_resource (
+    id              BIGINT          NOT NULL AUTO_INCREMENT,
+    resource_key    VARCHAR(200)    NOT NULL,
+    language        VARCHAR(20)     NOT NULL,
+    resource_value  TEXT,
+    resource_type   VARCHAR(50)     DEFAULT 'field_label',
+    template_id     BIGINT,
+    field_name      VARCHAR(100),
+    tenant_id       BIGINT          DEFAULT 1,
+    created_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_form_i18n PRIMARY KEY (id),
+    CONSTRAINT uk_i18n_key_lang UNIQUE (resource_key, language, tenant_id),
+    CONSTRAINT fk_i18n_template FOREIGN KEY (template_id) REFERENCES form_template (id)
+);
+
+COMMENT ON TABLE form_i18n_resource IS '多语言资源表';
+COMMENT ON COLUMN form_i18n_resource.id IS '主键ID';
+COMMENT ON COLUMN form_i18n_resource.resource_key IS '资源键(字段名或模板名等)';
+COMMENT ON COLUMN form_i18n_resource.language IS '语言代码: zh-CN, en-US';
+COMMENT ON COLUMN form_i18n_resource.resource_value IS '翻译后的内容';
+COMMENT ON COLUMN form_i18n_resource.resource_type IS '资源类型: field_label, template_name, description';
+COMMENT ON COLUMN form_i18n_resource.template_id IS '关联模板ID';
+COMMENT ON COLUMN form_i18n_resource.field_name IS '关联字段名';
+COMMENT ON COLUMN form_i18n_resource.tenant_id IS '租户ID';
+COMMENT ON COLUMN form_i18n_resource.created_at IS '创建时间';
+COMMENT ON COLUMN form_i18n_resource.updated_at IS '更新时间';
+
+CREATE INDEX idx_i18n_template_id ON form_i18n_resource (template_id);
+CREATE INDEX idx_i18n_language ON form_i18n_resource (language);
+CREATE INDEX idx_i18n_field_name ON form_i18n_resource (field_name);
+CREATE INDEX idx_i18n_tenant_id ON form_i18n_resource (tenant_id);
+
+-- ============================================================
+-- 15. 扩展 form_field 表，添加多语言标签字段
+-- ============================================================
+ALTER TABLE form_field ADD COLUMN IF NOT EXISTS field_label_i18n TEXT COMMENT '多语言标签JSON存储';
+ALTER TABLE form_field ADD COLUMN IF NOT EXISTS options_i18n TEXT COMMENT '多语言选项JSON存储';
+
+-- ============================================================
+-- 初始化默认多语言配置
+-- ============================================================
+INSERT INTO form_i18n_resource (resource_key, language, resource_value, resource_type, tenant_id) VALUES
+('common.submit', 'zh-CN', '提交', 'system', 1),
+('common.submit', 'en-US', 'Submit', 'system', 1),
+('common.cancel', 'zh-CN', '取消', 'system', 1),
+('common.cancel', 'en-US', 'Cancel', 'system', 1),
+('common.save', 'zh-CN', '保存', 'system', 1),
+('common.save', 'en-US', 'Save', 'system', 1),
+('common.delete', 'zh-CN', '删除', 'system', 1),
+('common.delete', 'en-US', 'Delete', 'system', 1),
+('common.edit', 'zh-CN', '编辑', 'system', 1),
+('common.edit', 'en-US', 'Edit', 'system', 1),
+('common.required', 'zh-CN', '必填', 'system', 1),
+('common.required', 'en-US', 'Required', 'system', 1),
+('common.optional', 'zh-CN', '可选', 'system', 1),
+('common.optional', 'en-US', 'Optional', 'system', 1);
+

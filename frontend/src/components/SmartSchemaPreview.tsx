@@ -26,6 +26,7 @@ import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import SmartFieldWrapper from './SmartFieldWrapper';
 import AddressComplete from './AddressComplete';
 import CollaborationCursor from './CollaborationCursor';
+import { useI18n } from '@/contexts/I18nContext';
 
 export interface SmartSchemaPreviewRef {
   setFieldValue: (fieldName: string, value: any) => void;
@@ -83,6 +84,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
   ) => {
     const formRef = useRef<Form | null>(null);
     const [externallyDisabledFields, setExternallyDisabledFields] = useState<Set<string>>(new Set());
+    const { language, translate } = useI18n();
 
     const form = useMemo(() => {
       const f = createForm({
@@ -230,15 +232,24 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
           const errorMsgs = res.fieldResults
             .filter((r) => !r.valid)
             .map((r) => {
-              const fieldLabel = fieldMap[r.fieldName]?.fieldLabel || r.fieldName;
-              const firstErr = r.errors?.[0]?.errorMessage || '校验失败';
+              const fieldLabel = translate(r.fieldName, fieldMap[r.fieldName]?.fieldLabel || r.fieldName);
+              const firstErr = r.errors?.[0]?.errorMessage || translate('validationFailed', '校验失败');
               return `${fieldLabel}: ${firstErr}`;
             });
+
+          const errorTitle =
+            language === 'zh-CN'
+              ? `表单校验未通过，发现 ${errorMsgs.length} 个问题：`
+              : `Validation failed, ${errorMsgs.length} issue(s) found:`;
+          const moreErrorsText =
+            language === 'zh-CN'
+              ? `还有 ${errorMsgs.length - 5} 个错误...`
+              : `${errorMsgs.length - 5} more error(s)...`;
 
           message.error(
             <div>
               <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
-                表单校验未通过，发现 {errorMsgs.length} 个问题：
+                {errorTitle}
               </div>
               <div style={{ maxHeight: 200, overflow: 'auto' }}>
                 {errorMsgs.slice(0, 5).map((msg, idx) => (
@@ -248,7 +259,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
                 ))}
                 {errorMsgs.length > 5 && (
                   <div style={{ padding: '4px 0', fontSize: 13, color: '#999' }}>
-                    还有 {errorMsgs.length - 5} 个错误...
+                    {moreErrorsText}
                   </div>
                 )}
               </div>
@@ -262,7 +273,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
         console.warn('服务端校验失败:', err);
         return true;
       }
-    }, [templateId, form.values, fieldMap]);
+    }, [templateId, form.values, fieldMap, translate, language]);
 
     useImperativeHandle(ref, () => ({
       setFieldValue: (fieldName: string, value: any) => {
@@ -367,6 +378,11 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
           props[key] = { ...props[key], 'x-display': 'none' };
         } else {
           const p = { ...props[key] };
+          const field = fieldMap[key];
+          const originalLabel = field?.fieldLabel || p.title || key;
+          const translatedLabel = translate(key, originalLabel);
+          p.title = translatedLabel;
+
           if (dynamicOptionsMap[key]) {
             p.enum = dynamicOptionsMap[key];
           }
@@ -424,6 +440,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       fieldMap,
       showAddressComplete,
       isFieldLockedByOther,
+      translate,
     ]);
 
     const schemaJson = useMemo(
@@ -603,13 +620,13 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
     ]);
 
     return (
-      <Card title="表单预览" size="small">
+      <Card title={translate('formPreview', '表单预览')} size="small">
         <FormProvider form={form}>
           <SchemaField schema={schemaJson} components={allComponents} />
           {onSubmit && editable && (
             <div style={{ marginTop: 16, textAlign: 'center' }}>
               <Button type="primary" onClick={handleSubmit}>
-                提交
+                {translate('submit', '提交')}
               </Button>
             </div>
           )}

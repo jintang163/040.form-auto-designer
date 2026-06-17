@@ -382,6 +382,7 @@ export default function TemplateCreate() {
                 field={selectedField}
                 onChange={(data) => handleFieldChange(selectedField.id, data)}
                 allFields={fields}
+                templateId={isEdit && id ? id : undefined}
               />
             ) : (
               <Card size="small"><Empty description="选择字段进行编辑" /></Card>
