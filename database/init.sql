@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS form_data (
     CONSTRAINT pk_form_data PRIMARY KEY (id),
     CONSTRAINT fk_data_template FOREIGN KEY (template_id) REFERENCES form_template (id),
     CONSTRAINT ck_data_source CHECK (source IN ('PC', 'MINI_PROGRAM')),
-    CONSTRAINT ck_data_status CHECK (status IN ('DRAFT', 'SUBMITTED'))
+    CONSTRAINT ck_data_status CHECK (status IN ('DRAFT', 'SUBMITTED', 'APPROVING', 'APPROVED', 'REJECTED'))
 );
 
 COMMENT ON TABLE form_data IS '填报数据表';
@@ -322,3 +322,130 @@ CREATE INDEX idx_fvs_template_field ON form_field_value_stats (template_id, fiel
 CREATE INDEX idx_fvs_submitter ON form_field_value_stats (submitter_id);
 CREATE INDEX idx_fvs_template_field_submitter ON form_field_value_stats (template_id, field_name, submitter_id);
 CREATE INDEX idx_fvs_frequency ON form_field_value_stats (frequency DESC);
+
+-- ============================================================
+-- 10. 流程定义表 workflow_process
+-- ============================================================
+CREATE TABLE IF NOT EXISTS workflow_process (
+    id                      BIGINT          NOT NULL AUTO_INCREMENT,
+    template_id             BIGINT          NOT NULL,
+    process_key             VARCHAR(200)    NOT NULL,
+    process_name            VARCHAR(200)    NOT NULL,
+    process_definition_id   VARCHAR(200),
+    bpmn_xml                TEXT,
+    form_variable_mapping   TEXT,
+    multi_instance_type     INT             DEFAULT 0,
+    assignees               VARCHAR(1000),
+    approval_levels         INT             DEFAULT 1,
+    status                  VARCHAR(20)     DEFAULT 'ACTIVE',
+    tenant_id               BIGINT          DEFAULT 1,
+    created_at              TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    updated_at              TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_workflow_process PRIMARY KEY (id),
+    CONSTRAINT uk_process_key UNIQUE (process_key, tenant_id)
+);
+
+COMMENT ON TABLE workflow_process IS '流程定义表';
+COMMENT ON COLUMN workflow_process.id IS '主键ID';
+COMMENT ON COLUMN workflow_process.template_id IS '关联表单模板ID';
+COMMENT ON COLUMN workflow_process.process_key IS '流程定义Key(唯一标识)';
+COMMENT ON COLUMN workflow_process.process_name IS '流程名称';
+COMMENT ON COLUMN workflow_process.process_definition_id IS 'Flowable流程定义ID';
+COMMENT ON COLUMN workflow_process.bpmn_xml IS 'BPMN XML定义';
+COMMENT ON COLUMN workflow_process.form_variable_mapping IS '表单字段与流程变量映射(JSON: {formField: processVar})';
+COMMENT ON COLUMN workflow_process.multi_instance_type IS '多实例类型: 0-逐级审批, 1-或签, 2-会签';
+COMMENT ON COLUMN workflow_process.assignees IS '审批人列表(逗号分隔)';
+COMMENT ON COLUMN workflow_process.approval_levels IS '审批级数';
+COMMENT ON COLUMN workflow_process.status IS '状态: ACTIVE-生效, INACTIVE-失效';
+COMMENT ON COLUMN workflow_process.tenant_id IS '租户ID';
+COMMENT ON COLUMN workflow_process.created_at IS '创建时间';
+COMMENT ON COLUMN workflow_process.updated_at IS '更新时间';
+
+CREATE INDEX idx_wp_template_id ON workflow_process (template_id);
+CREATE INDEX idx_wp_status ON workflow_process (status);
+CREATE INDEX idx_wp_tenant_id ON workflow_process (tenant_id);
+
+-- ============================================================
+-- 11. 流程实例表 workflow_instance
+-- ============================================================
+CREATE TABLE IF NOT EXISTS workflow_instance (
+    id                      BIGINT          NOT NULL AUTO_INCREMENT,
+    form_data_id            BIGINT          NOT NULL,
+    template_id             BIGINT          NOT NULL,
+    process_instance_id     VARCHAR(200)    NOT NULL,
+    process_definition_id   VARCHAR(200),
+    business_key            VARCHAR(200),
+    status                  VARCHAR(20)     DEFAULT 'RUNNING',
+    submitter_id            VARCHAR(100),
+    current_assignee        VARCHAR(100),
+    current_level           INT             DEFAULT 1,
+    start_time              TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    end_time                TIMESTAMP,
+    outcome                 VARCHAR(20),
+    tenant_id               BIGINT          DEFAULT 1,
+    created_at              TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_workflow_instance PRIMARY KEY (id),
+    CONSTRAINT ck_wf_instance_status CHECK (status IN ('RUNNING', 'APPROVED', 'REJECTED', 'CANCELLED'))
+);
+
+COMMENT ON TABLE workflow_instance IS '流程实例表';
+COMMENT ON COLUMN workflow_instance.id IS '主键ID';
+COMMENT ON COLUMN workflow_instance.form_data_id IS '关联填报数据ID';
+COMMENT ON COLUMN workflow_instance.template_id IS '关联表单模板ID';
+COMMENT ON COLUMN workflow_instance.process_instance_id IS 'Flowable流程实例ID';
+COMMENT ON COLUMN workflow_instance.process_definition_id IS 'Flowable流程定义ID';
+COMMENT ON COLUMN workflow_instance.business_key IS '业务Key(通常是formDataId)';
+COMMENT ON COLUMN workflow_instance.status IS '状态: RUNNING-审批中, APPROVED-已通过, REJECTED-已驳回, CANCELLED-已取消';
+COMMENT ON COLUMN workflow_instance.submitter_id IS '提交人ID';
+COMMENT ON COLUMN workflow_instance.current_assignee IS '当前审批人';
+COMMENT ON COLUMN workflow_instance.current_level IS '当前审批级别';
+COMMENT ON COLUMN workflow_instance.start_time IS '流程启动时间';
+COMMENT ON COLUMN workflow_instance.end_time IS '流程结束时间';
+COMMENT ON COLUMN workflow_instance.outcome IS '审批结果: APPROVED/REJECTED';
+COMMENT ON COLUMN workflow_instance.tenant_id IS '租户ID';
+COMMENT ON COLUMN workflow_instance.created_at IS '创建时间';
+
+CREATE INDEX idx_wi_form_data_id ON workflow_instance (form_data_id);
+CREATE INDEX idx_wi_template_id ON workflow_instance (template_id);
+CREATE INDEX idx_wi_process_instance_id ON workflow_instance (process_instance_id);
+CREATE INDEX idx_wi_status ON workflow_instance (status);
+CREATE INDEX idx_wi_submitter_id ON workflow_instance (submitter_id);
+CREATE INDEX idx_wi_tenant_id ON workflow_instance (tenant_id);
+
+-- ============================================================
+-- 12. 流程任务表 workflow_task
+-- ============================================================
+CREATE TABLE IF NOT EXISTS workflow_task (
+    id                      BIGINT          NOT NULL AUTO_INCREMENT,
+    workflow_instance_id    BIGINT          NOT NULL,
+    task_id                 VARCHAR(200)    NOT NULL,
+    task_name               VARCHAR(200),
+    task_definition_key     VARCHAR(200),
+    assignee                VARCHAR(100),
+    action                  VARCHAR(20),
+    comment                 TEXT,
+    approval_level          INT             DEFAULT 1,
+    claimed_at              TIMESTAMP,
+    completed_at            TIMESTAMP,
+    created_at              TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_workflow_task PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE workflow_task IS '流程任务表';
+COMMENT ON COLUMN workflow_task.id IS '主键ID';
+COMMENT ON COLUMN workflow_task.workflow_instance_id IS '关联流程实例ID';
+COMMENT ON COLUMN workflow_task.task_id IS 'Flowable任务ID';
+COMMENT ON COLUMN workflow_task.task_name IS '任务名称';
+COMMENT ON COLUMN workflow_task.task_definition_key IS '任务定义Key';
+COMMENT ON COLUMN workflow_task.assignee IS '审批人';
+COMMENT ON COLUMN workflow_task.action IS '动作: APPROVE-通过, REJECT-驳回';
+COMMENT ON COLUMN workflow_task.comment IS '审批意见';
+COMMENT ON COLUMN workflow_task.approval_level IS '审批级别';
+COMMENT ON COLUMN workflow_task.claimed_at IS '认领时间';
+COMMENT ON COLUMN workflow_task.completed_at IS '完成时间';
+COMMENT ON COLUMN workflow_task.created_at IS '创建时间';
+
+CREATE INDEX idx_wt_workflow_instance_id ON workflow_task (workflow_instance_id);
+CREATE INDEX idx_wt_task_id ON workflow_task (task_id);
+CREATE INDEX idx_wt_assignee ON workflow_task (assignee);
+CREATE INDEX idx_wt_action ON workflow_task (action);

@@ -30,6 +30,7 @@
         <kingbase.version>8.6.0</kingbase.version>
         <clickhouse.version>0.4.6</clickhouse.version>
         <aviator.version>5.4.3</aviator.version>
+        <flowable.version>6.8.0</flowable.version>
     </properties>
 
     <dependencies>
@@ -116,6 +117,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flowable</groupId>
+            <artifactId>flowable-spring-boot-starter</artifactId>
+            <version>${flowable.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flowable</groupId>
+            <artifactId>flowable-spring-boot-starter-rest</artifactId>
+            <version>${flowable.version}</version>
         </dependency>
 
         <dependency>

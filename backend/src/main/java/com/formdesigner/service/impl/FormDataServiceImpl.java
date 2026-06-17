@@ -14,6 +14,7 @@ import com.formdesigner.service.DataStatisticsService;
 import com.formdesigner.service.SmartRecommendService;
 import com.formdesigner.service.SysTenantService;
 import com.formdesigner.service.WebhookRuleService;
+import com.formdesigner.service.WorkflowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -36,6 +37,7 @@ public class FormDataServiceImpl implements FormDataService {
     private final WebhookRuleService webhookRuleService;
     private final DataStatisticsService dataStatisticsService;
     private final SmartRecommendService smartRecommendService;
+    private final WorkflowService workflowService;
     private final ObjectMapper objectMapper;
 
     private Long currentTenantId() {
@@ -73,6 +75,26 @@ public class FormDataServiceImpl implements FormDataService {
             smartRecommendService.recordSubmission(dto.getTemplateId(), dto.getSubmitterId(), dto.getFieldValuesJson());
         } catch (Exception e) {
             log.warn("智能推荐统计记录异常: {}", e.getMessage());
+        }
+
+        try {
+            com.formdesigner.vo.WorkflowProcessVO wfProcess = workflowService.getProcessByTemplateId(dto.getTemplateId());
+            if (wfProcess != null) {
+                Map<String, Object> fieldValues = objectMapper.readValue(dto.getFieldValuesJson(), Map.class);
+
+                com.formdesigner.dto.WorkflowStartDTO startDto = new com.formdesigner.dto.WorkflowStartDTO();
+                startDto.setFormDataId(formData.getId());
+                startDto.setTemplateId(dto.getTemplateId());
+                startDto.setSubmitterId(dto.getSubmitterId());
+                startDto.setVariables(fieldValues);
+
+                workflowService.startProcess(startDto);
+                log.info("表单提交后自动触发审批流程: formDataId={}", formData.getId());
+            }
+        } catch (IllegalArgumentException e) {
+            log.debug("该模板未配置审批流程，跳过: {}", e.getMessage());
+        } catch (Exception e) {
+            log.warn("触发审批流程异常: {}", e.getMessage());
         }
 
         return formData;

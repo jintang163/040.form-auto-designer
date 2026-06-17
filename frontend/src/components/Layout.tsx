@@ -8,6 +8,7 @@ import {
   BarChartOutlined,
   ApiOutlined,
   TeamOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import TenantSwitcher from './TenantSwitcher';
 
@@ -39,6 +40,11 @@ const menuItems = [
     icon: <TeamOutlined />,
     label: '租户管理',
   },
+  {
+    key: '/approval',
+    icon: <AuditOutlined />,
+    label: '审批中心',
+  },
 ];
 
 function buildBreadcrumb(pathname: string) {
@@ -52,6 +58,7 @@ function buildBreadcrumb(pathname: string) {
     statistics: '统计分析',
     'webhook-rules': '推送规则',
     tenants: '租户管理',
+    approval: '审批中心',
   };
   const items = [{ title: <><HomeOutlined /><span>首页</span></> }];
   let path = '';

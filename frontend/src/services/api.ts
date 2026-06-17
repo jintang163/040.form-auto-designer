@@ -30,6 +30,11 @@ import type {
   FormValidateRequest,
   ContextRecommendation,
   AddressSuggestion,
+  WorkflowProcess,
+  WorkflowInstance,
+  WorkflowDeployRequest,
+  WorkflowStartRequest,
+  WorkflowActionRequest,
 } from '@/types';
 
 const request = axios.create({
@@ -574,4 +579,48 @@ export const authApi = {
 
   validate: () =>
     request.get<any, ApiResponse<boolean>>('/auth/validate').then(unwrap),
+};
+
+export const workflowApi = {
+  deployProcess: (data: WorkflowDeployRequest) =>
+    request.post<any, ApiResponse<WorkflowProcess>>('/workflow/deploy', data).then(unwrap),
+
+  getProcessByTemplateId: (templateId: string) =>
+    request.get<any, ApiResponse<WorkflowProcess>>(`/workflow/process/template/${templateId}`).then(unwrap),
+
+  listProcessesByTemplateId: (templateId: string) =>
+    request.get<any, ApiResponse<WorkflowProcess[]>>(`/workflow/process/template/${templateId}/list`).then(unwrap),
+
+  startProcess: (data: WorkflowStartRequest) =>
+    request.post<any, ApiResponse<WorkflowInstance>>('/workflow/start', data).then(unwrap),
+
+  approve: (data: WorkflowActionRequest) =>
+    request.post<any, ApiResponse<WorkflowInstance>>('/workflow/approve', data).then(unwrap),
+
+  reject: (data: WorkflowActionRequest) =>
+    request.post<any, ApiResponse<WorkflowInstance>>('/workflow/reject', data).then(unwrap),
+
+  getInstance: (id: string) =>
+    request.get<any, ApiResponse<WorkflowInstance>>(`/workflow/instance/${id}`).then(unwrap),
+
+  getInstanceByFormDataId: (formDataId: string) =>
+    request.get<any, ApiResponse<WorkflowInstance>>(`/workflow/instance/form-data/${formDataId}`).then(unwrap),
+
+  listInstancesByTemplateId: (templateId: string) =>
+    request.get<any, ApiResponse<WorkflowInstance[]>>(`/workflow/instance/template/${templateId}`).then(unwrap),
+
+  listMyPendingTasks: (assignee: string) =>
+    request.get<any, ApiResponse<WorkflowInstance[]>>('/workflow/my-pending', { params: { assignee } }).then(unwrap),
+
+  listMySubmitted: (submitterId: string) =>
+    request.get<any, ApiResponse<WorkflowInstance[]>>('/workflow/my-submitted', { params: { submitterId } }).then(unwrap),
+
+  getProcessVariables: (instanceId: string) =>
+    request.get<any, ApiResponse<Record<string, any>>>(`/workflow/instance/${instanceId}/variables`).then(unwrap),
+
+  syncFormVariables: (formDataId: number, fieldValues: Record<string, any>) =>
+    request.post<any, ApiResponse<void>>(`/workflow/sync-variables?formDataId=${formDataId}`, fieldValues).then(unwrap),
+
+  generateBpmnXml: (data: WorkflowDeployRequest) =>
+    request.post<any, ApiResponse<string>>('/workflow/generate-bpmn', data).then(unwrap),
 };

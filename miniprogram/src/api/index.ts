@@ -170,3 +170,86 @@ export function autoCorrectValue(templateId: number, fieldName: string, value: a
     data: { value }
   })
 }
+
+export function getWorkflowProcess(templateId: number) {
+  return request<any>({
+    url: `/api/workflow/process/template/${templateId}`,
+    method: 'GET'
+  })
+}
+
+export function startWorkflow(data: {
+  formDataId: number
+  templateId: number
+  submitterId?: string
+  variables?: Record<string, any>
+}) {
+  return request<any>({
+    url: '/api/workflow/start',
+    method: 'POST',
+    data
+  })
+}
+
+export function approveWorkflow(data: {
+  taskId: string
+  action: 'APPROVE'
+  comment?: string
+}) {
+  return request<any>({
+    url: '/api/workflow/approve',
+    method: 'POST',
+    data
+  })
+}
+
+export function rejectWorkflow(data: {
+  taskId: string
+  action: 'REJECT'
+  comment?: string
+}) {
+  return request<any>({
+    url: '/api/workflow/reject',
+    method: 'POST',
+    data
+  })
+}
+
+export function getWorkflowInstanceByFormDataId(formDataId: number) {
+  return request<any>({
+    url: `/api/workflow/instance/form-data/${formDataId}`,
+    method: 'GET'
+  })
+}
+
+export function getMyPendingTasks(assignee: string) {
+  return request<any[]>({
+    url: '/api/workflow/my-pending',
+    method: 'GET',
+    data: { assignee }
+  })
+}
+
+export function getMySubmitted(submitterId: string) {
+  return request<any[]>({
+    url: '/api/workflow/my-submitted',
+    method: 'GET',
+    data: { submitterId }
+  })
+}
+
+export function deployWorkflow(data: {
+  templateId: number
+  processKey: string
+  processName: string
+  assignees: string[]
+  multiInstanceType?: number
+  formVariableMapping?: string
+  approvalLevels?: number
+}) {
+  return request<any>({
+    url: '/api/workflow/deploy',
+    method: 'POST',
+    data
+  })
+}

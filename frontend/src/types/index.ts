@@ -207,6 +207,73 @@ export interface AddressSuggestion {
   confidence: number;
 }
 
+export interface WorkflowProcess {
+  id: string;
+  templateId: string;
+  processKey: string;
+  processName: string;
+  processDefinitionId?: string;
+  formVariableMapping?: string;
+  multiInstanceType: number;
+  assignees: string[];
+  approvalLevels: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface WorkflowTask {
+  taskId: string;
+  taskName: string;
+  assignee: string;
+  action?: 'APPROVE' | 'REJECT';
+  comment?: string;
+  approvalLevel: number;
+  claimedAt?: string;
+  completedAt?: string;
+}
+
+export interface WorkflowInstance {
+  id: string;
+  formDataId: string;
+  templateId: string;
+  processInstanceId: string;
+  status: 'RUNNING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  submitterId: string;
+  currentAssignee?: string;
+  currentLevel: number;
+  startTime: string;
+  endTime?: string;
+  outcome?: string;
+  tasks: WorkflowTask[];
+  processVariables?: Record<string, any>;
+}
+
+export interface WorkflowDeployRequest {
+  templateId: number;
+  processKey: string;
+  processName: string;
+  bpmnXml?: string;
+  formVariableMapping?: string;
+  multiInstanceType?: number;
+  assignees: string[];
+  approvalLevels?: number;
+}
+
+export interface WorkflowStartRequest {
+  formDataId: number;
+  templateId: number;
+  submitterId?: string;
+  variables?: Record<string, any>;
+}
+
+export interface WorkflowActionRequest {
+  taskId: string;
+  action: 'APPROVE' | 'REJECT';
+  assignee?: string;
+  comment?: string;
+  outcome?: string;
+}
+
 export interface DistributionItem {
   value: string;
   label: string;

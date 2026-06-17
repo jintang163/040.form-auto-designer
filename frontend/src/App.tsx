@@ -10,6 +10,7 @@ import FormDataDetail from './pages/FormDataDetail';
 import DataStatistics from './pages/DataStatistics';
 import WebhookRules from './pages/WebhookRules';
 import TenantManagement from './pages/TenantManagement';
+import ApprovalCenter from './pages/ApprovalCenter';
 import { useTenantStore } from './store/tenantStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="statistics" element={<DataStatistics />} />
         <Route path="webhook-rules" element={<WebhookRules />} />
         <Route path="tenants" element={<TenantManagement />} />
+        <Route path="approval" element={<ApprovalCenter />} />
       </Route>
     </Routes>
   );

@@ -44,6 +44,12 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 
+flowable:
+  async-executor-activate: true
+  database-schema-update: true
+  history-level: full
+  process-definition-location-prefix: classpath*:/processes/
+
 minio:
   endpoint: http://localhost:9000
   access-key: minioadmin
