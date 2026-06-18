@@ -148,6 +148,30 @@ public class FormDataServiceImpl implements FormDataService {
     }
 
     @Override
+    public Map<String, Object> getDetailWithPermissions(Long id) {
+        FormData data = formDataMapper.selectById(id, currentTenantId());
+        if (data == null) {
+            return null;
+        }
+        List<FormField> fields = getTemplateFields(data.getTemplateId());
+        applyMasking(data, fields);
+
+        FormTemplate template = formTemplateMapper.selectById(data.getTemplateId(), currentTenantId());
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", data.getId());
+        result.put("templateId", data.getTemplateId());
+        result.put("templateName", template != null ? template.getTemplateName() : "");
+        result.put("version", data.getVersion());
+        result.put("fieldValuesJson", data.getFieldValuesJson());
+        result.put("submitterId", data.getSubmitterId());
+        result.put("submittedAt", data.getSubmittedAt());
+        result.put("tenantId", data.getTenantId());
+        result.put("fields", fields);
+        result.put("fieldPermissions", dataMaskingService.getFieldMaskingInfo(data.getTemplateId(), fields).get("fieldPermissions"));
+        return result;
+    }
+
+    @Override
     public List<FormData> listByTemplateId(Long templateId) {
         List<FormData> list = formDataMapper.selectByTemplateId(templateId, currentTenantId());
         List<FormField> fields = getTemplateFields(templateId);
@@ -176,9 +200,19 @@ public class FormDataServiceImpl implements FormDataService {
     @Override
     public void exportExcel(Long templateId, String fieldName, String fieldValue,
                             HttpServletResponse response) {
+        List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
+        List<String> noExportFields = new ArrayList<>();
+        for (FormField f : fields) {
+            if (dataMaskingService.isFieldSensitive(f) && !fieldPermissionService.canExport(templateId, f.getFieldName())) {
+                noExportFields.add(f.getFieldLabel());
+            }
+        }
+        if (!noExportFields.isEmpty()) {
+            throw new SecurityException("以下敏感字段无导出权限: " + String.join(", ", noExportFields));
+        }
+
         List<FormData> dataList = formDataMapper.selectByTemplateIdFiltered(
                 templateId, fieldName, fieldValue, currentTenantId());
-        List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
         FormTemplate template = formTemplateMapper.selectById(templateId, currentTenantId());
 
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -266,7 +300,35 @@ public class FormDataServiceImpl implements FormDataService {
 
     @Override
     public boolean updateFieldValues(Long id, String fieldValuesJson) {
-        return formDataMapper.updateFieldValues(id, fieldValuesJson) > 0;
+        FormData existing = formDataMapper.selectById(id, currentTenantId());
+        if (existing == null) {
+            throw new IllegalArgumentException("数据不存在");
+        }
+        List<FormField> fields = getTemplateFields(existing.getTemplateId());
+        try {
+            Map<String, Object> newValues = parseFieldValues(fieldValuesJson);
+            Map<String, Object> oldValues = parseFieldValues(existing.getFieldValuesJson());
+            Map<String, Object> merged = new HashMap<>(oldValues);
+            List<String> denied = new ArrayList<>();
+            for (Map.Entry<String, Object> entry : newValues.entrySet()) {
+                String fn = entry.getKey();
+                boolean fieldExists = fields.stream().anyMatch(f -> f.getFieldName().equals(fn));
+                if (fieldExists && !fieldPermissionService.canEdit(existing.getTemplateId(), fn)) {
+                    denied.add(fn);
+                } else {
+                    merged.put(fn, entry.getValue());
+                }
+            }
+            if (!denied.isEmpty()) {
+                throw new SecurityException("无编辑权限的字段: " + String.join(", ", denied));
+            }
+            existing.setFieldValuesJson(toJson(merged));
+        } catch (SecurityException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("更新字段值解析失败: {}", e.getMessage());
+        }
+        return formDataMapper.updateFieldValues(id, existing.getFieldValuesJson()) > 0;
     }
 
     @Override

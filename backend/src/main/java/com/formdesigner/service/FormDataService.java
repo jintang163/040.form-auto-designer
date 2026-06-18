@@ -12,6 +12,8 @@ public interface FormDataService {
 
     FormData getById(Long id);
 
+    Map<String, Object> getDetailWithPermissions(Long id);
+
     List<FormData> listByTemplateId(Long templateId);
 
     Map<String, Object> listByTemplateIdPaged(Long templateId, int page, int pageSize,

@@ -264,6 +264,9 @@ export const formDataApi = {
   getFormDataDetail: (formDataId: string) =>
     request.get<any, ApiResponse<FormData>>(`/form-data/${formDataId}`).then(unwrap),
 
+  getFormDataDetailWithPermissions: (formDataId: string) =>
+    request.get<any, ApiResponse<any>>(`/form-data/${formDataId}/detail`).then(unwrap),
+
   exportExcel: (templateId: string, params?: { fieldName?: string; fieldValue?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.fieldName) searchParams.set('fieldName', params.fieldName);

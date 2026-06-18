@@ -12,6 +12,7 @@ import WebhookRules from './pages/WebhookRules';
 import TenantManagement from './pages/TenantManagement';
 import ApprovalCenter from './pages/ApprovalCenter';
 import CollaborationFill from './pages/CollaborationFill';
+import FieldPermissionConfig from './pages/FieldPermissionConfig';
 import { useTenantStore } from './store/tenantStore';
 import { I18nProvider } from './contexts/I18nContext';
 
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="webhook-rules" element={<WebhookRules />} />
           <Route path="tenants" element={<TenantManagement />} />
           <Route path="approval" element={<ApprovalCenter />} />
+          <Route path="field-permissions" element={<FieldPermissionConfig />} />
         </Route>
       </Routes>
     </I18nProvider>

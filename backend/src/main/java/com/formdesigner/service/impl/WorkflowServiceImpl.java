@@ -13,6 +13,7 @@ import com.formdesigner.mapper.WorkflowProcessMapper;
 import com.formdesigner.mapper.WorkflowTaskMapper;
 import com.formdesigner.service.WorkflowService;
 import com.formdesigner.service.FormDataService;
+import com.formdesigner.service.FieldPermissionService;
 import com.formdesigner.vo.WorkflowInstanceVO;
 import com.formdesigner.vo.WorkflowProcessVO;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class WorkflowServiceImpl implements WorkflowService {
     private final WorkflowInstanceMapper instanceMapper;
     private final WorkflowTaskMapper taskMapper;
     private final FormDataService formDataService;
+    private final FieldPermissionService fieldPermissionService;
     private final ObjectMapper objectMapper;
 
     private Long currentTenantId() {
@@ -353,15 +355,25 @@ public class WorkflowServiceImpl implements WorkflowService {
                 @SuppressWarnings("unchecked")
                 Map<String, String> mapping = objectMapper.readValue(process.getFormVariableMapping(), Map.class);
                 Map<String, Object> varsToUpdate = new HashMap<>();
+                List<String> denied = new ArrayList<>();
                 for (Map.Entry<String, String> entry : mapping.entrySet()) {
                     if (fieldValues.containsKey(entry.getKey())) {
-                        varsToUpdate.put(entry.getValue(), fieldValues.get(entry.getKey()));
+                        if (!fieldPermissionService.canEdit(instance.getTemplateId(), entry.getKey())) {
+                            denied.add(entry.getKey());
+                        } else {
+                            varsToUpdate.put(entry.getValue(), fieldValues.get(entry.getKey()));
+                        }
                     }
+                }
+                if (!denied.isEmpty()) {
+                    throw new SecurityException("无编辑权限的字段: " + String.join(", ", denied));
                 }
                 if (!varsToUpdate.isEmpty()) {
                     runtimeService.setVariables(instance.getProcessInstanceId(), varsToUpdate);
                     log.debug("同步流程变量: instanceId={}, vars={}", instance.getProcessInstanceId(), varsToUpdate.keySet());
                 }
+            } catch (SecurityException e) {
+                throw e;
             } catch (Exception e) {
                 log.warn("同步流程变量失败: {}", e.getMessage());
             }

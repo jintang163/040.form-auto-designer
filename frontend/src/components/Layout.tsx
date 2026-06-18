@@ -9,6 +9,7 @@ import {
   ApiOutlined,
   TeamOutlined,
   AuditOutlined,
+  SafetyOutlined,
 } from '@ant-design/icons';
 import TenantSwitcher from './TenantSwitcher';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -46,6 +47,11 @@ const menuItems = [
     icon: <AuditOutlined />,
     label: '审批中心',
   },
+  {
+    key: '/field-permissions',
+    icon: <SafetyOutlined />,
+    label: '权限配置',
+  },
 ];
 
 function buildBreadcrumb(pathname: string) {
@@ -60,6 +66,7 @@ function buildBreadcrumb(pathname: string) {
     'webhook-rules': '推送规则',
     tenants: '租户管理',
     approval: '审批中心',
+    'field-permissions': '权限配置',
   };
   const items = [{ title: <><HomeOutlined /><span>首页</span></> }];
   let path = '';

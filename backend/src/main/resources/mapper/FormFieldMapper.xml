@@ -3,25 +3,29 @@
 <mapper namespace="com.formdesigner.mapper.FormFieldMapper">
 
     <insert id="insert" parameterType="com.formdesigner.entity.FormField" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO form_field (template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n)
-        VALUES (#{templateId}, #{fieldName}, #{fieldLabel}, #{fieldType}, #{inputType}, #{required}, #{defaultValue}, #{validationRules}, #{sortOrder}, #{layoutConfig}, #{tenantId}, #{fieldLabelI18n}, #{optionsI18n})
+        INSERT INTO form_field (template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n, is_sensitive)
+        VALUES (#{templateId}, #{fieldName}, #{fieldLabel}, #{fieldType}, #{inputType}, #{required}, #{defaultValue}, #{validationRules}, #{sortOrder}, #{layoutConfig}, #{tenantId}, #{fieldLabelI18n}, #{optionsI18n}, #{isSensitive})
     </insert>
 
     <insert id="batchInsert" parameterType="java.util.List">
-        INSERT INTO form_field (template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n)
+        INSERT INTO form_field (template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n, is_sensitive)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.templateId}, #{item.fieldName}, #{item.fieldLabel}, #{item.fieldType}, #{item.inputType}, #{item.required}, #{item.defaultValue}, #{item.validationRules}, #{item.sortOrder}, #{item.layoutConfig}, #{item.tenantId}, #{item.fieldLabelI18n}, #{item.optionsI18n})
+            (#{item.templateId}, #{item.fieldName}, #{item.fieldLabel}, #{item.fieldType}, #{item.inputType}, #{item.required}, #{item.defaultValue}, #{item.validationRules}, #{item.sortOrder}, #{item.layoutConfig}, #{item.tenantId}, #{item.fieldLabelI18n}, #{item.optionsI18n}, #{item.isSensitive})
         </foreach>
     </insert>
 
+    <sql id="Base_Column_List">
+        id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n, is_sensitive
+    </sql>
+
     <select id="selectById" resultType="com.formdesigner.entity.FormField">
-        SELECT id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n
+        SELECT <include refid="Base_Column_List"/>
         FROM form_field WHERE id = #{id}
     </select>
 
     <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormField">
-        SELECT id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n
+        SELECT <include refid="Base_Column_List"/>
         FROM form_field WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY sort_order
     </select>
 
@@ -40,6 +44,7 @@
             <if test="tenantId != null">tenant_id = #{tenantId},</if>
             <if test="fieldLabelI18n != null">field_label_i18n = #{fieldLabelI18n},</if>
             <if test="optionsI18n != null">options_i18n = #{optionsI18n},</if>
+            <if test="isSensitive != null">is_sensitive = #{isSensitive},</if>
         </set>
         WHERE id = #{id}
     </update>
@@ -53,7 +58,7 @@
     </delete>
 
     <select id="selectByTemplateIdAndFieldName" resultType="com.formdesigner.entity.FormField">
-        SELECT id, template_id, field_name, field_label, field_type, input_type, required, default_value, validation_rules, sort_order, layout_config, tenant_id, field_label_i18n, options_i18n
+        SELECT <include refid="Base_Column_List"/>
         FROM form_field WHERE template_id = #{templateId} AND field_name = #{fieldName} AND tenant_id = #{tenantId}
     </select>
 

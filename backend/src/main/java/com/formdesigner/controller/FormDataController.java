@@ -29,6 +29,11 @@ public class FormDataController {
         return R.ok(formDataService.getById(id));
     }
 
+    @GetMapping("/{id}/detail")
+    public R<Map<String, Object>> getDetailWithPermissions(@PathVariable Long id) {
+        return R.ok(formDataService.getDetailWithPermissions(id));
+    }
+
     @GetMapping("/template/{templateId}")
     public R<List<FormData>> listByTemplateId(@PathVariable Long templateId) {
         return R.ok(formDataService.listByTemplateId(templateId));
