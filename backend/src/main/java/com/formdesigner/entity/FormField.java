@@ -19,4 +19,5 @@ public class FormField {
     private Long tenantId;
     private String fieldLabelI18n;
     private String optionsI18n;
+    private Boolean isSensitive;
 }

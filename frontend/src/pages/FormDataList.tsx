@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Select, Button, Input, Space, message, Popconfirm } from 'antd';
-import { DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Select, Button, Input, Space, message, Popconfirm, Tag } from 'antd';
+import { DownloadOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { templateApi, formDataApi, fieldApi } from '@/services/api';
-import type { FormTemplate, FormField, FormData } from '@/types';
+import MaskedFieldCell from '@/components/MaskedFieldCell';
+import type { FormTemplate, FormField, FormData, FieldPermissionInfo } from '@/types';
 
 export default function FormDataList() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function FormDataList() {
   const [filterFieldName, setFilterFieldName] = useState<string>('');
   const [filterFieldValue, setFilterFieldValue] = useState<string>('');
   const [selectedFilterField, setSelectedFilterField] = useState<string>('');
+  const [fieldPermissions, setFieldPermissions] = useState<Record<string, FieldPermissionInfo>>({});
 
   useEffect(() => {
     templateApi.getTemplates({ page: 1, pageSize: 200 }).then((res) => {
@@ -44,6 +46,9 @@ export default function FormDataList() {
       .then((res: any) => {
         setDataList(res.list || []);
         setTotal(res.total || 0);
+        if (res.fieldPermissions) {
+          setFieldPermissions(res.fieldPermissions);
+        }
       })
       .catch((e) => message.error(e.message))
       .finally(() => setLoading(false));
@@ -73,22 +78,44 @@ export default function FormDataList() {
     },
   ];
 
-  const dynamicColumns = fields.slice(0, 5).map((f) => ({
-    title: f.fieldLabel,
-    key: f.fieldName,
-    width: 150,
-    render: (_: any, record: any) => {
-      try {
-        const values = typeof record.fieldValuesJson === 'string'
-          ? JSON.parse(record.fieldValuesJson)
-          : record.fieldValuesJson;
-        const val = values?.[f.fieldName];
-        return val != null ? String(val) : '';
-      } catch {
-        return '';
-      }
-    },
-  }));
+  const dynamicColumns = fields.slice(0, 5).map((f) => {
+    const perm = fieldPermissions[f.fieldName];
+    const isSensitive = perm?.isSensitive || f.isSensitive;
+    return {
+      title: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {f.fieldLabel}
+          {isSensitive && (
+            <Tag color="red" icon={<LockOutlined />} style={{ fontSize: 10, padding: '0 4px' }}>
+              敏感
+            </Tag>
+          )}
+        </span>
+      ),
+      key: f.fieldName,
+      width: 180,
+      render: (_: any, record: any) => {
+        try {
+          const values = typeof record.fieldValuesJson === 'string'
+            ? JSON.parse(record.fieldValuesJson)
+            : record.fieldValuesJson;
+          const val = values?.[f.fieldName];
+          const strVal = val != null ? String(val) : '';
+          return (
+            <MaskedFieldCell
+              formDataId={String(record.id)}
+              fieldName={f.fieldName}
+              value={strVal}
+              permission={perm}
+              isSensitive={f.isSensitive}
+            />
+          );
+        } catch {
+          return '';
+        }
+      },
+    };
+  });
 
   const actionColumn = {
     title: '操作', key: 'actions', width: 120,

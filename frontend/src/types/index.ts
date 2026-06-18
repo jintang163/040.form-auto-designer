@@ -40,11 +40,33 @@ export interface FieldConfig {
     operator: 'eq' | 'ne' | 'contains' | 'gt' | 'lt';
     value: string;
   }[];
+  isSensitive?: boolean;
 }
 
 export interface FormField extends FieldConfig {
   id: string;
   templateId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FieldPermissionInfo {
+  isSensitive: boolean;
+  canViewSensitive: boolean;
+  canEdit: boolean;
+  canExport: boolean;
+}
+
+export interface FormFieldPermission {
+  id: number;
+  tenantId: number;
+  templateId?: number;
+  fieldName?: string;
+  roleName?: string;
+  userId?: string;
+  canViewSensitive: boolean;
+  canEdit: boolean;
+  canExport: boolean;
   createdAt: string;
   updatedAt: string;
 }

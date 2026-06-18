@@ -51,7 +51,7 @@ export default function App() {
           <Route path="templates/:id/edit" element={<TemplateCreate />} />
           <Route path="templates/:id/preview" element={<TemplatePreview />} />
           <Route path="form-data" element={<FormDataList />} />
-          <Route path="form-data/:templateId" element={<FormDataDetail />} />
+          <Route path="form-data/:id" element={<FormDataDetail />} />
           <Route path="statistics" element={<DataStatistics />} />
           <Route path="webhook-rules" element={<WebhookRules />} />
           <Route path="tenants" element={<TenantManagement />} />

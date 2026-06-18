@@ -40,6 +40,8 @@ import type {
   FieldLock,
   FormI18nResource,
   LanguageCode,
+  FieldPermissionInfo,
+  FormFieldPermission,
 } from '@/types';
 
 const request = axios.create({
@@ -270,6 +272,9 @@ export const formDataApi = {
     const url = `/api/form-data/template/${templateId}/export${qs ? '?' + qs : ''}`;
     window.open(url, '_blank');
   },
+
+  getFieldRawValue: (formDataId: string, fieldName: string) =>
+    request.get<any, ApiResponse<string>>(`/form-data/${formDataId}/field/${fieldName}/raw`).then(unwrap),
 };
 
 export const statisticsApi = {
@@ -421,6 +426,7 @@ function mapFieldFromBackend(f: any): FormField {
     layoutConfig: f.layoutConfig ? (typeof f.layoutConfig === 'string' ? JSON.parse(f.layoutConfig) : f.layoutConfig) : { row: 1, col: 1, rowSpan: 1, colSpan: 1 },
     createdAt: f.createdAt || new Date().toISOString(),
     updatedAt: f.updatedAt || new Date().toISOString(),
+    isSensitive: f.isSensitive === true || f.isSensitive === 1,
   };
 }
 
@@ -724,4 +730,20 @@ export const i18nApi = {
         params: { templateId, resourceType },
       })
       .then(unwrap),
+};
+
+export const fieldPermissionApi = {
+  getPermissions: (templateId: string) =>
+    request.get<any, ApiResponse<FormFieldPermission[]>>(`/field-permissions/template/${templateId}`).then(unwrap),
+
+  savePermission: (data: Partial<FormFieldPermission>) =>
+    request.post<any, ApiResponse<FormFieldPermission>>('/field-permissions', data).then(unwrap),
+
+  deletePermission: (id: number) =>
+    request.delete<any, ApiResponse<void>>(`/field-permissions/${id}`).then(unwrap),
+
+  checkPermission: (templateId: string, fieldName: string) =>
+    request.get<any, ApiResponse<Record<string, boolean>>>('/field-permissions/check', {
+      params: { templateId, fieldName },
+    }).then(unwrap),
 };

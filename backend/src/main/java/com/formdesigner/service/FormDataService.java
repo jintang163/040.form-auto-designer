@@ -25,4 +25,6 @@ public interface FormDataService {
     boolean updateStatus(Long id, String status);
 
     boolean updateFieldValues(Long id, String fieldValuesJson);
+
+    String getFieldRawValue(Long formDataId, String fieldName);
 }

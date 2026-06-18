@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.FormFieldPermissionMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.FormFieldPermission">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="template_id" property="templateId"/>
+        <result column="field_name" property="fieldName"/>
+        <result column="role_name" property="roleName"/>
+        <result column="user_id" property="userId"/>
+        <result column="can_view_sensitive" property="canViewSensitive"/>
+        <result column="can_edit" property="canEdit"/>
+        <result column="can_export" property="canExport"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, tenant_id, template_id, field_name, role_name, user_id,
+        can_view_sensitive, can_edit, can_export, created_at, updated_at
+    </sql>
+
+    <select id="selectByTemplateAndField" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM form_field_permission
+        WHERE (tenant_id = #{tenantId})
+          AND (template_id = #{templateId} OR template_id IS NULL)
+          AND (field_name = #{fieldName} OR field_name IS NULL)
+        ORDER BY
+            CASE WHEN template_id IS NOT NULL AND field_name IS NOT NULL THEN 0
+                 WHEN template_id IS NOT NULL THEN 1
+                 ELSE 2
+            END
+    </select>
+
+    <insert id="insert" parameterType="com.formdesigner.entity.FormFieldPermission"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO form_field_permission (
+            tenant_id, template_id, field_name, role_name, user_id,
+            can_view_sensitive, can_edit, can_export, created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{templateId}, #{fieldName}, #{roleName}, #{userId},
+            #{canViewSensitive}, #{canEdit}, #{canExport}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="update" parameterType="com.formdesigner.entity.FormFieldPermission">
+        UPDATE form_field_permission
+        SET can_view_sensitive = #{canViewSensitive},
+            can_edit = #{canEdit},
+            can_export = #{canExport},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM form_field_permission WHERE id = #{id}
+    </delete>
+
+</mapper>

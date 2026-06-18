@@ -1,5 +1,6 @@
 package com.formdesigner.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.formdesigner.common.TenantContext;
 import com.formdesigner.dto.FormSubmitDTO;
@@ -9,12 +10,7 @@ import com.formdesigner.entity.FormTemplate;
 import com.formdesigner.mapper.FormDataMapper;
 import com.formdesigner.mapper.FormFieldMapper;
 import com.formdesigner.mapper.FormTemplateMapper;
-import com.formdesigner.service.FormDataService;
-import com.formdesigner.service.DataStatisticsService;
-import com.formdesigner.service.SmartRecommendService;
-import com.formdesigner.service.SysTenantService;
-import com.formdesigner.service.WebhookRuleService;
-import com.formdesigner.service.WorkflowService;
+import com.formdesigner.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -38,11 +34,52 @@ public class FormDataServiceImpl implements FormDataService {
     private final DataStatisticsService dataStatisticsService;
     private final SmartRecommendService smartRecommendService;
     private final WorkflowService workflowService;
+    private final SysTenantService tenantService;
+    private final DataMaskingService dataMaskingService;
+    private final FieldPermissionService fieldPermissionService;
     private final ObjectMapper objectMapper;
 
     private Long currentTenantId() {
         Long tid = TenantContext.getTenantId();
         return tid != null ? tid : 1L;
+    }
+
+    private List<FormField> getTemplateFields(Long templateId) {
+        return formFieldMapper.selectByTemplateId(templateId, currentTenantId());
+    }
+
+    private Map<String, Object> parseFieldValues(String json) throws Exception {
+        return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+    }
+
+    private String toJson(Map<String, Object> values) throws Exception {
+        return objectMapper.writeValueAsString(values);
+    }
+
+    private FormData applyMasking(FormData formData, List<FormField> fields) {
+        if (formData == null || formData.getFieldValuesJson() == null) {
+            return formData;
+        }
+        try {
+            Map<String, Object> values = parseFieldValues(formData.getFieldValuesJson());
+            Map<String, Object> masked = dataMaskingService.maskFieldValues(
+                    formData.getTemplateId(), values, fields);
+            formData.setFieldValuesJson(toJson(masked));
+        } catch (Exception e) {
+            log.warn("数据脱敏失败: {}", e.getMessage());
+        }
+        return formData;
+    }
+
+    private List<FormData> applyMasking(List<FormData> dataList, List<FormField> fields) {
+        if (dataList == null || fields == null) {
+            return dataList;
+        }
+        List<FormData> result = new ArrayList<>();
+        for (FormData fd : dataList) {
+            result.add(applyMasking(fd, fields));
+        }
+        return result;
     }
 
     @Override
@@ -102,12 +139,19 @@ public class FormDataServiceImpl implements FormDataService {
 
     @Override
     public FormData getById(Long id) {
-        return formDataMapper.selectById(id, currentTenantId());
+        FormData data = formDataMapper.selectById(id, currentTenantId());
+        if (data != null) {
+            List<FormField> fields = getTemplateFields(data.getTemplateId());
+            applyMasking(data, fields);
+        }
+        return data;
     }
 
     @Override
     public List<FormData> listByTemplateId(Long templateId) {
-        return formDataMapper.selectByTemplateId(templateId, currentTenantId());
+        List<FormData> list = formDataMapper.selectByTemplateId(templateId, currentTenantId());
+        List<FormField> fields = getTemplateFields(templateId);
+        return applyMasking(list, fields);
     }
 
     @Override
@@ -117,12 +161,15 @@ public class FormDataServiceImpl implements FormDataService {
         List<FormData> list = formDataMapper.selectByTemplateIdPaged(
                 templateId, offset, pageSize, fieldName, fieldValue, currentTenantId());
         Long total = formDataMapper.countByTemplateId(templateId, fieldName, fieldValue, currentTenantId());
+        List<FormField> fields = getTemplateFields(templateId);
+        List<FormData> maskedList = applyMasking(list, fields);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", list);
+        result.put("list", maskedList);
         result.put("total", total);
         result.put("page", page);
         result.put("pageSize", pageSize);
+        result.put("fieldPermissions", dataMaskingService.getFieldMaskingInfo(templateId, fields).get("fieldPermissions"));
         return result;
     }
 
@@ -156,12 +203,16 @@ public class FormDataServiceImpl implements FormDataService {
             timeCell.setCellValue("提交时间");
             timeCell.setCellStyle(headerStyle);
 
-            Map<String, String> fieldLabelMap = new LinkedHashMap<>();
+            Map<String, FormField> fieldMap = new LinkedHashMap<>();
             for (FormField field : fields) {
                 Cell cell = headerRow.createCell(colIdx++);
-                cell.setCellValue(field.getFieldLabel());
+                String label = field.getFieldLabel();
+                if (dataMaskingService.isFieldSensitive(field)) {
+                    label = label + "(脱敏)";
+                }
+                cell.setCellValue(label);
                 cell.setCellStyle(headerStyle);
-                fieldLabelMap.put(field.getFieldName(), field.getFieldLabel());
+                fieldMap.put(field.getFieldName(), field);
             }
 
             int rowIdx = 1;
@@ -173,14 +224,15 @@ public class FormDataServiceImpl implements FormDataService {
                 row.createCell(c++).setCellValue(fd.getSubmittedAt() != null ? fd.getSubmittedAt().toString() : "");
 
                 try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> values = objectMapper.readValue(fd.getFieldValuesJson(), Map.class);
-                    for (String fn : fieldLabelMap.keySet()) {
-                        Object val = values.get(fn);
+                    Map<String, Object> values = parseFieldValues(fd.getFieldValuesJson());
+                    Map<String, Object> masked = dataMaskingService.maskFieldValuesForExport(
+                            templateId, values, fields);
+                    for (String fn : fieldMap.keySet()) {
+                        Object val = masked.get(fn);
                         row.createCell(c++).setCellValue(val != null ? String.valueOf(val) : "");
                     }
                 } catch (Exception e) {
-                    for (int i = 0; i < fieldLabelMap.size(); i++) {
+                    for (int i = 0; i < fieldMap.size(); i++) {
                         row.createCell(c++).setCellValue("");
                     }
                 }
@@ -215,5 +267,35 @@ public class FormDataServiceImpl implements FormDataService {
     @Override
     public boolean updateFieldValues(Long id, String fieldValuesJson) {
         return formDataMapper.updateFieldValues(id, fieldValuesJson) > 0;
+    }
+
+    @Override
+    public String getFieldRawValue(Long formDataId, String fieldName) {
+        FormData formData = formDataMapper.selectById(formDataId, currentTenantId());
+        if (formData == null) {
+            return null;
+        }
+        List<FormField> fields = getTemplateFields(formData.getTemplateId());
+        FormField targetField = null;
+        for (FormField f : fields) {
+            if (fieldName.equals(f.getFieldName())) {
+                targetField = f;
+                break;
+            }
+        }
+        if (targetField == null) {
+            return null;
+        }
+        if (!fieldPermissionService.canViewSensitive(formData.getTemplateId(), fieldName)) {
+            throw new SecurityException("没有权限查看该敏感字段的原始值");
+        }
+        try {
+            Map<String, Object> values = parseFieldValues(formData.getFieldValuesJson());
+            Object val = values.get(fieldName);
+            return val != null ? String.valueOf(val) : null;
+        } catch (Exception e) {
+            log.warn("获取字段原始值失败: {}", e.getMessage());
+            return null;
+        }
     }
 }

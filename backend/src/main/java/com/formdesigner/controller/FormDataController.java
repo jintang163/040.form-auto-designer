@@ -58,4 +58,11 @@ public class FormDataController {
         formDataService.deleteById(id);
         return R.ok();
     }
+
+    @GetMapping("/{id}/field/{fieldName}/raw")
+    public R<String> getFieldRawValue(
+            @PathVariable Long id,
+            @PathVariable String fieldName) {
+        return R.ok(formDataService.getFieldRawValue(id, fieldName));
+    }
 }
