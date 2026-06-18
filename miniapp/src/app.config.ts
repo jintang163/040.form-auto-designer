@@ -6,7 +6,8 @@ export default defineAppConfig({
     'pages/mine/index',
     'pages/formDetail/index',
     'pages/templateDetail/index',
-    'pages/analytics/index'
+    'pages/analytics/index',
+    'pages/form-data-detail/index'
   ],
   window: {
     backgroundTextStyle: 'light',

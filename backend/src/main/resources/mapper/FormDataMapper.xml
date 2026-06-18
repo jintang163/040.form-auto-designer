@@ -12,6 +12,11 @@
         FROM form_data WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
+    <select id="selectById" resultType="com.formdesigner.entity.FormData">
+        SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
+        FROM form_data WHERE id = #{id}
+    </select>
+
     <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormData">
         SELECT id, template_id, version, field_values_json, submitter_id, tenant_id, submitted_at
         FROM form_data WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY submitted_at DESC

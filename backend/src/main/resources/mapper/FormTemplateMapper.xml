@@ -12,6 +12,11 @@
         FROM form_template WHERE id = #{id} AND tenant_id = #{tenantId}
     </select>
 
+    <select id="selectById" resultType="com.formdesigner.entity.FormTemplate">
+        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        FROM form_template WHERE id = #{id}
+    </select>
+
     <select id="selectByTemplateCode" resultType="com.formdesigner.entity.FormTemplate">
         SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
         FROM form_template WHERE template_code = #{templateCode} AND tenant_id = #{tenantId}

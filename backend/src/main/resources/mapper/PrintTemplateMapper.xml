@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.PrintTemplateMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.PrintTemplate">
+        <id column="id" property="id"/>
+        <result column="template_id" property="templateId"/>
+        <result column="template_name" property="templateName"/>
+        <result column="template_code" property="templateCode"/>
+        <result column="template_type" property="templateType"/>
+        <result column="template_content" property="templateContent"/>
+        <result column="paper_size" property="paperSize"/>
+        <result column="orientation" property="orientation"/>
+        <result column="margin_top" property="marginTop"/>
+        <result column="margin_bottom" property="marginBottom"/>
+        <result column="margin_left" property="marginLeft"/>
+        <result column="margin_right" property="marginRight"/>
+        <result column="watermark_enabled" property="watermarkEnabled"/>
+        <result column="watermark_text" property="watermarkText"/>
+        <result column="watermark_opacity" property="watermarkOpacity"/>
+        <result column="watermark_rotation" property="watermarkRotation"/>
+        <result column="watermark_font_size" property="watermarkFontSize"/>
+        <result column="watermark_color" property="watermarkColor"/>
+        <result column="header_enabled" property="headerEnabled"/>
+        <result column="header_content" property="headerContent"/>
+        <result column="footer_enabled" property="footerEnabled"/>
+        <result column="footer_content" property="footerContent"/>
+        <result column="background_image_url" property="backgroundImageUrl"/>
+        <result column="background_fixed" property="backgroundFixed"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="status" property="status"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="created_by" property="createdBy"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, template_id, template_name, template_code, template_type, template_content,
+        paper_size, orientation, margin_top, margin_bottom, margin_left, margin_right,
+        watermark_enabled, watermark_text, watermark_opacity, watermark_rotation,
+        watermark_font_size, watermark_color, header_enabled, header_content,
+        footer_enabled, footer_content, background_image_url, background_fixed,
+        is_default, status, tenant_id, created_at, updated_at, created_by
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_template
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_template
+        WHERE template_code = #{templateCode}
+          AND (tenant_id = #{tenantId} OR tenant_id = 0)
+        LIMIT 1
+    </select>
+
+    <select id="selectByTemplateId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_template
+        WHERE (template_id = #{templateId} OR template_id = 0)
+          AND (tenant_id = #{tenantId} OR tenant_id = 0)
+          AND status = 'ACTIVE'
+        ORDER BY is_default DESC, created_at DESC
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_template
+        WHERE (tenant_id = #{tenantId} OR tenant_id = 0)
+          AND status = 'ACTIVE'
+        ORDER BY is_default DESC, created_at DESC
+    </select>
+
+    <select id="selectDefault" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_template
+        WHERE is_default = 1
+          AND status = 'ACTIVE'
+          AND (template_id = #{templateId} OR template_id = 0)
+          AND (tenant_id = #{tenantId} OR tenant_id = 0)
+        ORDER BY tenant_id DESC, template_id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.formdesigner.entity.PrintTemplate" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO print_template (
+            template_id, template_name, template_code, template_type, template_content,
+            paper_size, orientation, margin_top, margin_bottom, margin_left, margin_right,
+            watermark_enabled, watermark_text, watermark_opacity, watermark_rotation,
+            watermark_font_size, watermark_color, header_enabled, header_content,
+            footer_enabled, footer_content, background_image_url, background_fixed,
+            is_default, status, tenant_id, created_by
+        ) VALUES (
+            #{templateId}, #{templateName}, #{templateCode}, #{templateType}, #{templateContent},
+            #{paperSize}, #{orientation}, #{marginTop}, #{marginBottom}, #{marginLeft}, #{marginRight},
+            #{watermarkEnabled}, #{watermarkText}, #{watermarkOpacity}, #{watermarkRotation},
+            #{watermarkFontSize}, #{watermarkColor}, #{headerEnabled}, #{headerContent},
+            #{footerEnabled}, #{footerContent}, #{backgroundImageUrl}, #{backgroundFixed},
+            #{isDefault}, #{status}, #{tenantId}, #{createdBy}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.formdesigner.entity.PrintTemplate">
+        UPDATE print_template
+        SET template_name = #{templateName},
+            template_code = #{templateCode},
+            template_type = #{templateType},
+            template_content = #{templateContent},
+            paper_size = #{paperSize},
+            orientation = #{orientation},
+            margin_top = #{marginTop},
+            margin_bottom = #{marginBottom},
+            margin_left = #{marginLeft},
+            margin_right = #{marginRight},
+            watermark_enabled = #{watermarkEnabled},
+            watermark_text = #{watermarkText},
+            watermark_opacity = #{watermarkOpacity},
+            watermark_rotation = #{watermarkRotation},
+            watermark_font_size = #{watermarkFontSize},
+            watermark_color = #{watermarkColor},
+            header_enabled = #{headerEnabled},
+            header_content = #{headerContent},
+            footer_enabled = #{footerEnabled},
+            footer_content = #{footerContent},
+            background_image_url = #{backgroundImageUrl},
+            background_fixed = #{backgroundFixed},
+            is_default = #{isDefault},
+            status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM print_template WHERE id = #{id}
+    </delete>
+
+    <update id="updateDefaultStatus">
+        UPDATE print_template
+        SET is_default = #{isDefault}
+        WHERE template_id = #{templateId}
+          AND tenant_id = #{tenantId}
+    </update>
+</mapper>

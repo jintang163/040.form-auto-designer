@@ -29,6 +29,11 @@
         FROM form_field WHERE template_id = #{templateId} AND tenant_id = #{tenantId} ORDER BY sort_order
     </select>
 
+    <select id="selectByTemplateId" resultType="com.formdesigner.entity.FormField">
+        SELECT <include refid="Base_Column_List"/>
+        FROM form_field WHERE template_id = #{templateId} ORDER BY sort_order
+    </select>
+
     <update id="updateById" parameterType="com.formdesigner.entity.FormField">
         UPDATE form_field
         <set>

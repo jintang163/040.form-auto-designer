@@ -12,6 +12,8 @@ public interface FormTemplateMapper {
 
     FormTemplate selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
+    FormTemplate selectById(@Param("id") Long id);
+
     FormTemplate selectByTemplateCode(@Param("templateCode") String templateCode, @Param("tenantId") Long tenantId);
 
     List<FormTemplate> selectAll(@Param("tenantId") Long tenantId);

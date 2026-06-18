@@ -1,0 +1,315 @@
+.print-action-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.print-action-sheet .mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.print-action-sheet .content {
+  position: relative;
+  width: 100%;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 16rpx 16rpx 0 0;
+  padding: 24rpx;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.print-action-sheet .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.print-action-sheet .title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.print-action-sheet .close {
+  font-size: 28rpx;
+  color: #999;
+  padding: 8rpx;
+}
+
+.print-action-sheet .section {
+  margin-bottom: 24rpx;
+}
+
+.print-action-sheet .label {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+
+.print-action-sheet .template-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.print-action-sheet .template-item {
+  padding: 16rpx 24rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.print-action-sheet .template-item.selected {
+  background: #1890ff;
+  color: #fff;
+}
+
+.print-action-sheet .default-tag {
+  font-size: 20rpx;
+  background: #52c41a;
+  color: #fff;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+
+.print-action-sheet .input {
+  width: 100%;
+  height: 72rpx;
+  padding: 0 16rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.print-action-sheet .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 32rpx;
+}
+
+.print-action-sheet .action-btn {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 8rpx;
+  font-size: 30rpx;
+}
+
+.print-action-sheet .action-btn.outline {
+  background: #fff;
+  color: #666;
+  border: 1rpx solid #ddd;
+}
+
+.bluetooth-print {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bluetooth-print .mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.bluetooth-print .content {
+  position: relative;
+  width: 100%;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 16rpx 16rpx 0 0;
+  padding: 24rpx;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.bluetooth-print .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.bluetooth-print .title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.bluetooth-print .close {
+  font-size: 28rpx;
+  color: #999;
+  padding: 8rpx;
+}
+
+.bluetooth-print .section {
+  margin-bottom: 24rpx;
+}
+
+.bluetooth-print .label {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+
+.bluetooth-print .connected-info {
+  display: flex;
+  align-items: center;
+  padding: 16rpx;
+  background: #f6ffed;
+  border: 1rpx solid #b7eb8f;
+  border-radius: 8rpx;
+  margin-bottom: 24rpx;
+}
+
+.bluetooth-print .connected-label {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.bluetooth-print .connected-name {
+  font-size: 28rpx;
+  color: #52c41a;
+  font-weight: bold;
+  flex: 1;
+}
+
+.bluetooth-print .disconnect {
+  font-size: 26rpx;
+  color: #ff4d4f;
+  padding: 8rpx 16rpx;
+}
+
+.bluetooth-print .service-list,
+.bluetooth-print .char-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.bluetooth-print .service-item,
+.bluetooth-print .char-item {
+  padding: 16rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+}
+
+.bluetooth-print .service-item.selected,
+.bluetooth-print .char-item.selected {
+  background: #1890ff;
+  color: #fff;
+}
+
+.bluetooth-print .service-uuid,
+.bluetooth-print .char-uuid {
+  font-size: 24rpx;
+  font-family: monospace;
+}
+
+.bluetooth-print .device-list {
+  margin-top: 24rpx;
+}
+
+.bluetooth-print .device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 16rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.bluetooth-print .device-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.bluetooth-print .device-rssi {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.bluetooth-print .empty-tip {
+  text-align: center;
+  padding: 60rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.bluetooth-print .scan-btn,
+.bluetooth-print .print-btn,
+.bluetooth-print .cancel-btn {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 8rpx;
+  font-size: 30rpx;
+  margin-top: 16rpx;
+}
+
+.bluetooth-print .cancel-btn {
+  background: #fff;
+  color: #666;
+  border: 1rpx solid #ddd;
+}
+
+.bluetooth-entry {
+  position: fixed;
+  bottom: calc(80vh + 24rpx);
+  left: 24rpx;
+  right: 24rpx;
+  background: #1890ff;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  text-align: center;
+  z-index: 1001;
+}
+
+.bluetooth-text {
+  color: #fff;
+  font-size: 28rpx;
+}
+
+.print-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 60rpx;
+  padding: 0 24rpx;
+  background: #1890ff;
+  color: #fff;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+}

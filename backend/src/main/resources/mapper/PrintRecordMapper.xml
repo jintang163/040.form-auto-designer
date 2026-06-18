@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.formdesigner.mapper.PrintRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.formdesigner.entity.PrintRecord">
+        <id column="id" property="id"/>
+        <result column="print_template_id" property="printTemplateId"/>
+        <result column="form_data_id" property="formDataId"/>
+        <result column="template_id" property="templateId"/>
+        <result column="file_name" property="fileName"/>
+        <result column="file_url" property="fileUrl"/>
+        <result column="file_size" property="fileSize"/>
+        <result column="print_type" property="printType"/>
+        <result column="print_count" property="printCount"/>
+        <result column="status" property="status"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, print_template_id, form_data_id, template_id, file_name, file_url,
+        file_size, print_type, print_count, status, error_message, tenant_id,
+        created_at, created_by
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_record
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByFormDataId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_record
+        WHERE form_data_id = #{formDataId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByTemplateId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM print_record
+        WHERE template_id = #{templateId}
+          AND tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+        LIMIT 100
+    </select>
+
+    <insert id="insert" parameterType="com.formdesigner.entity.PrintRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO print_record (
+            print_template_id, form_data_id, template_id, file_name, file_url,
+            file_size, print_type, print_count, status, error_message, tenant_id, created_by
+        ) VALUES (
+            #{printTemplateId}, #{formDataId}, #{templateId}, #{fileName}, #{fileUrl},
+            #{fileSize}, #{printType}, #{printCount}, #{status}, #{errorMessage}, #{tenantId}, #{createdBy}
+        )
+    </insert>
+
+    <update id="updatePrintCount">
+        UPDATE print_record
+        SET print_count = print_count + 1
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE print_record
+        SET status = #{status},
+            error_message = #{errorMessage}
+        WHERE id = #{id}
+    </update>
+</mapper>

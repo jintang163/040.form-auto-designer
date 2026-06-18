@@ -31,6 +31,10 @@
         <clickhouse.version>0.4.6</clickhouse.version>
         <aviator.version>5.4.3</aviator.version>
         <flowable.version>6.8.0</flowable.version>
+        <itext.version>7.2.5</itext.version>
+        <flying-saucer.version>9.1.22</flying-saucer.version>
+        <thymeleaf.version>3.0.15.RELEASE</thymeleaf.version>
+        <jsoup.version>1.15.3</jsoup.version>
     </properties>
 
     <dependencies>
@@ -157,6 +161,34 @@
             <groupId>com.googlecode.aviator</groupId>
             <artifactId>aviator</artifactId>
             <version>${aviator.version}</version>
+        </dependency>
+
+        <!-- iText 7 PDF库 -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itext7-core</artifactId>
+            <version>${itext.version}</version>
+            <type>pom</type>
+        </dependency>
+
+        <!-- Flying Saucer HTML转PDF -->
+        <dependency>
+            <groupId>org.xhtmlrenderer</groupId>
+            <artifactId>flying-saucer-pdf-itext5</artifactId>
+            <version>${flying-saucer.version}</version>
+        </dependency>
+
+        <!-- Thymeleaf 模板引擎 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!-- Jsoup HTML解析 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
         </dependency>
 
         <dependency>

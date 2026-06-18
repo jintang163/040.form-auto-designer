@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Spin, Descriptions, message, Card, Tag, Table } from 'antd';
+import { Button, Spin, Descriptions, message, Card, Tag, Table, Space } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { formDataApi } from '@/services/api';
 import { generateFormSchema } from '@/utils/schemaTransform';
 import SchemaPreview from '@/components/SchemaPreview';
 import MaskedFieldCell from '@/components/MaskedFieldCell';
+import PrintButton from '@/components/PrintButton';
 import type { FormSchema, FieldPermissionInfo } from '@/types';
 
 interface FieldInfo {
@@ -101,9 +102,17 @@ export default function FormDataDetail() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>填报数据详情</h3>
-        <Button onClick={() => navigate(-1)}>返回</Button>
+        <Space>
+          {id && templateId && (
+            <PrintButton
+              formDataId={Number(id)}
+              templateId={Number(templateId)}
+            />
+          )}
+          <Button onClick={() => navigate(-1)}>返回</Button>
+        </Space>
       </div>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Descriptions column={2} size="small">

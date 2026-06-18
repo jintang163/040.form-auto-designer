@@ -12,6 +12,8 @@ public interface FormDataMapper {
 
     FormData selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
+    FormData selectById(@Param("id") Long id);
+
     List<FormData> selectByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
     List<FormData> selectAll(@Param("tenantId") Long tenantId);

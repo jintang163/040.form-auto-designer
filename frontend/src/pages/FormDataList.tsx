@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Select, Button, Input, Space, message, Popconfirm, Tag } from 'antd';
-import { DownloadOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
+import { Table, Select, Button, Input, Space, message, Popconfirm, Tag, Checkbox } from 'antd';
+import { DownloadOutlined, DeleteOutlined, LockOutlined, FilePdfOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { templateApi, formDataApi, fieldApi } from '@/services/api';
 import MaskedFieldCell from '@/components/MaskedFieldCell';
+import BatchExportButton from '@/components/BatchExportButton';
 import type { FormTemplate, FormField, FormData, FieldPermissionInfo } from '@/types';
 
 export default function FormDataList() {
@@ -22,6 +23,7 @@ export default function FormDataList() {
   const [filterFieldValue, setFilterFieldValue] = useState<string>('');
   const [selectedFilterField, setSelectedFilterField] = useState<string>('');
   const [fieldPermissions, setFieldPermissions] = useState<Record<string, FieldPermissionInfo>>({});
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   useEffect(() => {
     templateApi.getTemplates({ page: 1, pageSize: 200 }).then((res) => {
@@ -160,15 +162,26 @@ export default function FormDataList() {
         />
         <Button type="primary" onClick={() => setPage(1)}>查询</Button>
         <Button onClick={() => { setSelectedFilterField(''); setFilterFieldValue(''); }}>重置</Button>
-        <Button icon={<DownloadOutlined />} onClick={handleExport} style={{ marginLeft: 'auto' }}>
+        <Button icon={<DownloadOutlined />} onClick={handleExport}>
           导出Excel
         </Button>
+        {selectedTemplateId && (
+          <BatchExportButton
+            formDataIds={selectedRowKeys.map((k) => Number(k))}
+            templateId={Number(selectedTemplateId)}
+            buttonText="批量导出PDF"
+          />
+        )}
       </div>
       <Table
         rowKey="id"
         columns={columns}
         dataSource={dataList}
         loading={loading}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
         pagination={{
           current: page,
           pageSize,

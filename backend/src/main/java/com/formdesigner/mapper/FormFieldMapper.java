@@ -16,6 +16,8 @@ public interface FormFieldMapper {
 
     List<FormField> selectByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 
+    List<FormField> selectByTemplateId(@Param("templateId") Long templateId);
+
     int updateById(FormField formField);
 
     int deleteById(@Param("id") Long id);

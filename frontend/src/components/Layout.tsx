@@ -10,6 +10,7 @@ import {
   TeamOutlined,
   AuditOutlined,
   SafetyOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons';
 import TenantSwitcher from './TenantSwitcher';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -52,6 +53,11 @@ const menuItems = [
     icon: <SafetyOutlined />,
     label: '权限配置',
   },
+  {
+    key: '/print-templates',
+    icon: <PrinterOutlined />,
+    label: '打印模板',
+  },
 ];
 
 function buildBreadcrumb(pathname: string) {
@@ -67,6 +73,7 @@ function buildBreadcrumb(pathname: string) {
     tenants: '租户管理',
     approval: '审批中心',
     'field-permissions': '权限配置',
+    'print-templates': '打印模板',
   };
   const items = [{ title: <><HomeOutlined /><span>首页</span></> }];
   let path = '';
