@@ -338,6 +338,22 @@ export const aiRecommendApi = {
       data
     ).then(unwrap),
 
+  getFieldTypeRecommendations: (data: {
+    fieldDefinitions: { fieldName: string; fieldLabel?: string; inputType?: string }[];
+    filledFields?: Record<string, any>;
+    targetFields?: string[];
+    excludeFields?: string[];
+  }) =>
+    request.post<any, ApiResponse<{ recommendations: FieldRecommendation[]; totalCount: number }>>(
+      'http://localhost:5000/api/recommend/field-type',
+      data
+    ).then(unwrap),
+
+  getSemanticRules: () =>
+    request.get<any, ApiResponse<{ rules: any[]; totalCount: number }>>(
+      'http://localhost:5000/api/recommend/semantic-rules'
+    ).then(unwrap),
+
   completeAddress: (data: {
     partialAddress: string;
     province?: string;

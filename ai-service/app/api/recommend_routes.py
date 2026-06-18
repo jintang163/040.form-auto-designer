@@ -12,6 +12,10 @@ from app.core.context_aware_recommender import (
     get_recommender,
     ContextRecommendation,
 )
+from app.core.field_type_recommender import (
+    generate_field_recommendations,
+    get_field_type_recommender,
+)
 
 
 router = APIRouter(prefix="/api/recommend", tags=["recommend"])
@@ -68,6 +72,49 @@ class AddressSuggestion(BaseModel):
 class AddressCompleteResponse(BaseModel):
     """地址补全响应"""
     suggestions: List[AddressSuggestion]
+    totalCount: int
+
+
+class FieldTypeRecommendRequest(BaseModel):
+    """字段类型推荐请求"""
+    fieldDefinitions: List[FieldInfo] = Field(..., description="字段定义列表")
+    filledFields: Optional[Dict[str, Any]] = Field(None, description="已填写的字段值")
+    targetFields: Optional[List[str]] = Field(None, description="目标字段列表")
+    excludeFields: Optional[List[str]] = Field(None, description="排除字段列表")
+
+
+class FieldTypeRecommendationItem(BaseModel):
+    """字段类型推荐结果项"""
+    targetField: str
+    suggestedValue: Any
+    confidence: float
+    source: str
+    explanation: str
+    exampleValues: List[str]
+    relatedFields: List[str]
+    fillHint: str
+
+
+class FieldTypeRecommendResponse(BaseModel):
+    """字段类型推荐响应"""
+    recommendations: List[FieldTypeRecommendationItem]
+    totalCount: int
+
+
+class SemanticRuleItem(BaseModel):
+    """语义规则项"""
+    name: str
+    matchKeywords: List[str]
+    matchInputTypes: List[str]
+    confidence: float
+    explanation: str
+    examples: List[str]
+    fillHint: str
+
+
+class SemanticRulesResponse(BaseModel):
+    """语义规则列表响应"""
+    rules: List[SemanticRuleItem]
     totalCount: int
 
 
@@ -225,4 +272,110 @@ async def get_relation_rules():
         return {'rules': rules, 'totalCount': len(rules)}
     except Exception as e:
         logger.exception(f"获取关联规则失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/field-type", response_model=FieldTypeRecommendResponse)
+async def get_field_type_recommendations(request: FieldTypeRecommendRequest):
+    """
+    根据字段类型和语义智能生成填报建议和默认值
+
+    支持的智能推荐：
+    - 日期类型 → 默认今天、当前月、当前年
+    - 时间类型 → 默认当前时间
+    - 性别 → 根据姓名或身份证号推断
+    - 年龄 → 根据出生日期自动计算
+    - 邮箱 → 根据姓名自动生成
+    - 邮编 → 根据地址推断
+    - 国家 → 默认中国
+    - 民族 → 默认汉族
+    - 数量 → 默认1
+    - 优先级 → 默认中
+    - 状态 → 默认待审批
+    - 各类格式示例 → 为用户提供填写参考
+    """
+    try:
+        logger.debug(f"收到字段类型推荐请求，字段数量: {len(request.fieldDefinitions)}")
+
+        field_defs = [f.model_dump() for f in request.fieldDefinitions]
+
+        result = generate_field_recommendations(
+            field_defs,
+            request.filledFields,
+            request.targetFields,
+            request.excludeFields,
+        )
+
+        recommendations = []
+        for rec in result:
+            recommendations.append(FieldTypeRecommendationItem(
+                targetField=rec['targetField'],
+                suggestedValue=rec['suggestedValue'],
+                confidence=rec['confidence'],
+                source=rec['source'],
+                explanation=rec['explanation'],
+                exampleValues=rec['exampleValues'],
+                relatedFields=rec['relatedFields'],
+                fillHint=rec['fillHint'],
+            ))
+
+        logger.debug(f"生成 {len(recommendations)} 条字段类型推荐")
+        return FieldTypeRecommendResponse(
+            recommendations=recommendations,
+            totalCount=len(recommendations),
+        )
+
+    except Exception as e:
+        logger.exception(f"字段类型推荐失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/field-type/single")
+async def get_single_field_type_recommendation(
+    fieldName: str,
+    fieldLabel: Optional[str] = None,
+    inputType: Optional[str] = None,
+    fieldType: Optional[str] = None,
+):
+    """
+    为单个字段生成类型推荐
+    """
+    try:
+        from app.core.field_type_recommender import SemanticFieldDef
+        field_def = SemanticFieldDef(
+            field_name=fieldName,
+            field_label=fieldLabel,
+            input_type=inputType,
+            field_type=fieldType,
+        )
+        rec = get_field_type_recommender().recommend_for_field(field_def)
+        if rec:
+            return {
+            'targetField': rec.target_field,
+            'suggestedValue': rec.suggested_value,
+            'confidence': rec.confidence,
+            'source': rec.source,
+            'explanation': rec.explanation,
+            'exampleValues': rec.example_values,
+            'relatedFields': rec.related_fields,
+            'fillHint': rec.fill_hint,
+        }
+        return {"recommendation": None}
+    except Exception as e:
+        logger.exception(f"单字段类型推荐失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/semantic-rules", response_model=SemanticRulesResponse)
+async def get_semantic_rules():
+    """获取所有语义规则列表"""
+    try:
+        rules = get_field_type_recommender().get_all_semantic_rules()
+        rule_items = [SemanticRuleItem(**rule) for rule in rules]
+        return SemanticRulesResponse(
+            rules=rule_items,
+            totalCount=len(rule_items),
+        )
+    except Exception as e:
+        logger.exception(f"获取语义规则失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))

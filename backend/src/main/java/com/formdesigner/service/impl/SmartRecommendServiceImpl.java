@@ -8,7 +8,9 @@ import com.formdesigner.entity.FormField;
 import com.formdesigner.mapper.FieldValueStatsMapper;
 import com.formdesigner.mapper.FormDataMapper;
 import com.formdesigner.mapper.FormFieldMapper;
+import com.formdesigner.service.AiRecommendService;
 import com.formdesigner.service.SmartRecommendService;
+import com.formdesigner.vo.ContextRecommendationVO;
 import com.formdesigner.vo.FieldRecommendationVO;
 import com.formdesigner.vo.FormRecommendationVO;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
     private final FormDataMapper formDataMapper;
     private final FormFieldMapper formFieldMapper;
     private final ObjectMapper objectMapper;
+    private final AiRecommendService aiRecommendService;
 
     private Long currentTenantId() { Long tid = TenantContext.getTenantId(); return tid != null ? tid : 1L; }
 
@@ -45,20 +48,111 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
         vo.setSubmitterId(submitterId);
 
         List<FormField> fields = formFieldMapper.selectByTemplateId(templateId, currentTenantId());
-        List<FieldRecommendationVO> fieldRecs = new ArrayList<>();
+        Map<String, FieldRecommendationVO> recommendationMap = new LinkedHashMap<>();
 
-        for (FormField field : fields) {
-            if (!isRecommendableField(field)) continue;
-            FieldRecommendationVO rec = getFieldRecommendations(templateId, field.getFieldName(), submitterId);
-            if (rec != null && rec.getItems() != null && rec.getItems().length > 0) {
-                rec.setFieldLabel(field.getFieldLabel());
-                rec.setInputType(field.getInputType());
-                fieldRecs.add(rec);
+        List<Map<String, Object>> fieldDefinitions = buildFieldDefinitions(fields);
+        Map<String, Object> latestFilledValues = getLatestFilledValues(templateId, submitterId);
+
+        List<FieldRecommendationVO> typeRecs = aiRecommendService.getFieldTypeRecommendations(
+                templateId, latestFilledValues, fieldDefinitions, null, null);
+        for (FieldRecommendationVO rec : typeRecs) {
+            enrichRecommendation(rec, fields);
+            if (rec.getConfidence() > 0) {
+                recommendationMap.put(rec.getFieldName(), rec);
             }
         }
 
+        List<ContextRecommendationVO> contextRecs = aiRecommendService.getContextRecommendations(
+                templateId, latestFilledValues, fieldDefinitions, null, null);
+        for (ContextRecommendationVO ctxRec : contextRecs) {
+            FieldRecommendationVO existing = recommendationMap.get(ctxRec.getTargetField());
+            if (existing == null || ctxRec.getConfidence() > existing.getConfidence()) {
+                FieldRecommendationVO rec = new FieldRecommendationVO();
+                rec.setFieldName(ctxRec.getTargetField());
+                rec.setRecommendedValue(ctxRec.getSuggestedValue() != null ? String.valueOf(ctxRec.getSuggestedValue()) : null);
+                rec.setConfidence(ctxRec.getConfidence());
+                rec.setSource(ctxRec.getSource());
+                rec.setExplanation(ctxRec.getExplanation());
+                if (ctxRec.getRelatedFields() != null) {
+                    rec.setRelatedFields(ctxRec.getRelatedFields().toArray(new String[0]));
+                }
+                enrichRecommendation(rec, fields);
+                recommendationMap.put(rec.getFieldName(), rec);
+            }
+        }
+
+        for (FormField field : fields) {
+            if (!isRecommendableField(field)) continue;
+            if (recommendationMap.containsKey(field.getFieldName())) {
+                FieldRecommendationVO existing = recommendationMap.get(field.getFieldName());
+                FieldRecommendationVO historyRec = getFieldRecommendations(templateId, field.getFieldName(), submitterId);
+                if (historyRec != null && historyRec.getItems() != null && historyRec.getItems().length > 0) {
+                    existing.setItems(historyRec.getItems());
+                    if (existing.getConfidence() < 0.5 && historyRec.getConfidence() > existing.getConfidence()) {
+                        existing.setRecommendedValue(historyRec.getRecommendedValue());
+                        existing.setConfidence(historyRec.getConfidence());
+                        existing.setSource(historyRec.getSource() != null ? historyRec.getSource() : "HISTORY");
+                    }
+                }
+            } else {
+                FieldRecommendationVO rec = getFieldRecommendations(templateId, field.getFieldName(), submitterId);
+                if (rec != null && rec.getItems() != null && rec.getItems().length > 0) {
+                    enrichRecommendation(rec, fields);
+                    rec.setSource("HISTORY");
+                    recommendationMap.put(rec.getFieldName(), rec);
+                }
+            }
+        }
+
+        List<FieldRecommendationVO> fieldRecs = new ArrayList<>(recommendationMap.values());
+        fieldRecs.sort((a, b) -> Double.compare(b.getConfidence(), a.getConfidence()));
+
         vo.setFields(fieldRecs);
         return vo;
+    }
+
+    private List<Map<String, Object>> buildFieldDefinitions(List<FormField> fields) {
+        List<Map<String, Object>> definitions = new ArrayList<>();
+        for (FormField field : fields) {
+            Map<String, Object> def = new LinkedHashMap<>();
+            def.put("fieldName", field.getFieldName());
+            def.put("fieldLabel", field.getFieldLabel());
+            def.put("inputType", field.getInputType());
+            def.put("fieldType", field.getFieldType());
+            definitions.add(def);
+        }
+        return definitions;
+    }
+
+    private Map<String, Object> getLatestFilledValues(Long templateId, String submitterId) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        if (submitterId == null || submitterId.isEmpty()) {
+            return values;
+        }
+        try {
+            List<FormData> userHistory = formDataMapper.selectBySubmitterId(templateId, submitterId);
+            if (!userHistory.isEmpty()) {
+                FormData latest = userHistory.get(0);
+                if (latest.getFieldValuesJson() != null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> parsed = objectMapper.readValue(latest.getFieldValuesJson(), Map.class);
+                    values.putAll(parsed);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取历史填写值失败: {}", e.getMessage());
+        }
+        return values;
+    }
+
+    private void enrichRecommendation(FieldRecommendationVO rec, List<FormField> fields) {
+        for (FormField field : fields) {
+            if (field.getFieldName().equals(rec.getFieldName())) {
+                rec.setFieldLabel(field.getFieldLabel());
+                rec.setInputType(field.getInputType());
+                break;
+            }
+        }
     }
 
     @Override
@@ -292,7 +386,9 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
     private boolean isRecommendableField(FormField field) {
         String inputType = field.getInputType();
         return "text".equals(inputType) || "select".equals(inputType)
-                || "textarea".equals(inputType) || "number".equals(inputType);
+                || "textarea".equals(inputType) || "number".equals(inputType)
+                || "date".equals(inputType) || "multiSelect".equals(inputType)
+                || "radio".equals(inputType);
     }
 
     private FieldRecommendationVO.RecommendedItem buildItem(FieldValueStats stats, double score, String source) {

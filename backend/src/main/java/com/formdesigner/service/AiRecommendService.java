@@ -1,12 +1,20 @@
 package com.formdesigner.service;
 
 import com.formdesigner.vo.ContextRecommendationVO;
+import com.formdesigner.vo.FieldRecommendationVO;
 import java.util.List;
 import java.util.Map;
 
 public interface AiRecommendService {
 
     List<ContextRecommendationVO> getContextRecommendations(
+            Long templateId,
+            Map<String, Object> filledFields,
+            List<Map<String, Object>> fieldDefinitions,
+            List<String> targetFields,
+            List<String> excludeFields);
+
+    List<FieldRecommendationVO> getFieldTypeRecommendations(
             Long templateId,
             Map<String, Object> filledFields,
             List<Map<String, Object>> fieldDefinitions,

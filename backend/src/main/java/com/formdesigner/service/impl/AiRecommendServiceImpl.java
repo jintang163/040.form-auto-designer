@@ -3,6 +3,7 @@ package com.formdesigner.service.impl;
 import com.formdesigner.config.GrpcClientConfig;
 import com.formdesigner.service.AiRecommendService;
 import com.formdesigner.vo.ContextRecommendationVO;
+import com.formdesigner.vo.FieldRecommendationVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -156,6 +157,69 @@ public class AiRecommendServiceImpl implements AiRecommendService {
             }
         } catch (Exception e) {
             log.warn("调用AI地址补全失败: {}", e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<FieldRecommendationVO> getFieldTypeRecommendations(
+            Long templateId,
+            Map<String, Object> filledFields,
+            List<Map<String, Object>> fieldDefinitions,
+            List<String> targetFields,
+            List<String> excludeFields) {
+
+        if (!isAvailable()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            String url = getBaseUrl() + "/api/recommend/field-type";
+
+            Map<String, Object> requestBody = new LinkedHashMap<>();
+            requestBody.put("fieldDefinitions", fieldDefinitions != null ? fieldDefinitions : Collections.emptyList());
+            requestBody.put("filledFields", filledFields != null ? filledFields : Collections.emptyMap());
+            requestBody.put("targetFields", targetFields != null ? targetFields : Collections.emptyList());
+            requestBody.put("excludeFields", excludeFields != null ? excludeFields : Collections.emptyList());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                List<Map<String, Object>> recs = (List<Map<String, Object>>) response.getBody().get("recommendations");
+                if (recs != null) {
+                    List<FieldRecommendationVO> result = new ArrayList<>();
+                    for (Map<String, Object> rec : recs) {
+                        FieldRecommendationVO vo = new FieldRecommendationVO();
+                        vo.setFieldName((String) rec.get("targetField"));
+                        Object suggestedValue = rec.get("suggestedValue");
+                        vo.setRecommendedValue(suggestedValue != null ? String.valueOf(suggestedValue) : null);
+                        vo.setConfidence(((Number) rec.get("confidence")).doubleValue());
+                        vo.setSource((String) rec.get("source"));
+                        vo.setExplanation((String) rec.get("explanation"));
+                        vo.setFillHint((String) rec.get("fillHint"));
+
+                        List<String> exampleValues = (List<String>) rec.get("exampleValues");
+                        if (exampleValues != null) {
+                            vo.setExampleValues(exampleValues.toArray(new String[0]));
+                        }
+
+                        List<String> relatedFields = (List<String>) rec.get("relatedFields");
+                        if (relatedFields != null) {
+                            vo.setRelatedFields(relatedFields.toArray(new String[0]));
+                        }
+
+                        result.add(vo);
+                    }
+                    log.debug("获取到 {} 条字段类型推荐", result.size());
+                    return result;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("调用AI字段类型推荐失败: {}", e.getMessage());
         }
         return Collections.emptyList();
     }

@@ -13,8 +13,12 @@ interface FieldSuggestionProps {
   errors?: ServerValidationError[];
   suggestions?: ValidationSuggestion[];
   autoCorrectedValue?: string;
+  fillHint?: string;
+  exampleValues?: string[];
+  explanation?: string;
   onApplySuggestion?: (suggestion: ValidationSuggestion) => void;
   onApplyAutoCorrect?: (value: string) => void;
+  onApplyExample?: (value: string) => void;
 }
 
 const suggestionIconMap: Record<string, string> = {
@@ -28,8 +32,22 @@ const suggestionTagMap: Record<string, { label: string; color: string }> = {
   HISTORY_USER_HISTORY: { label: '历史记录', color: 'green' },
   HISTORY_COLLABORATIVE: { label: '相似用户', color: 'cyan' },
   HISTORY_GLOBAL: { label: '热门选择', color: 'orange' },
+  HISTORY: { label: '历史推荐', color: 'green' },
+  USER_HISTORY: { label: '您的历史', color: 'green' },
+  COLLABORATIVE: { label: '相似用户', color: 'cyan' },
+  GLOBAL: { label: '热门选择', color: 'orange' },
   SIMILARITY_MATCH: { label: '相似匹配', color: 'gold' },
   RULE_BASED: { label: '规则推荐', color: 'blue' },
+  SEMANTIC_MATCH: { label: '语义识别', color: 'purple' },
+  TYPE_BASED: { label: '类型默认', color: 'geekblue' },
+  ID_CARD_PARSE: { label: '身份证解析', color: 'magenta' },
+  ID_CARD_REGION: { label: '地区识别', color: 'magenta' },
+  PHONE_PREFIX: { label: '手机号段', color: 'magenta' },
+  NAME_PATTERN: { label: '姓名推断', color: 'magenta' },
+  PROVINCE_CAPITAL: { label: '省会推断', color: 'magenta' },
+  ADDRESS_ZIPCODE: { label: '邮编推断', color: 'magenta' },
+  COMPANY_KEYWORD: { label: '公司分析', color: 'magenta' },
+  EMAIL_PREFIX: { label: '邮箱前缀', color: 'magenta' },
 };
 
 export const FieldSuggestion: React.FC<FieldSuggestionProps> = ({
@@ -37,8 +55,12 @@ export const FieldSuggestion: React.FC<FieldSuggestionProps> = ({
   errors = [],
   suggestions = [],
   autoCorrectedValue,
+  fillHint,
+  exampleValues = [],
+  explanation,
   onApplySuggestion,
   onApplyAutoCorrect,
+  onApplyExample,
 }) => {
   const sortedErrors = useMemo(
     () => [...errors].sort((a, b) => (b.severity || 0) - (a.severity || 0)),
@@ -101,6 +123,53 @@ export const FieldSuggestion: React.FC<FieldSuggestionProps> = ({
                   <Button size="small" type="primary" ghost>
                     应用
                   </Button>
+                </div>
+              )}
+            </Space>
+          }
+        />
+      )}
+
+      {(fillHint || exampleValues.length > 0 || explanation) && (
+        <Alert
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+          style={{ marginBottom: 8 }}
+          message={
+            <Space direction="vertical" size={4} style={{ width: '100%' }}>
+              {explanation && (
+                <div style={{ fontSize: 13, color: '#606266' }}>
+                  <span style={{ color: '#1677ff', fontWeight: 500 }}>💡 提示：</span>
+                  {explanation}
+                </div>
+              )}
+              {fillHint && (
+                <div style={{ fontSize: 12, color: '#909399' }}>
+                  <InfoCircleOutlined style={{ marginRight: 4 }} />
+                  {fillHint}
+                </div>
+              )}
+              {exampleValues.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 12, color: '#909399', marginBottom: 4 }}>
+                    📝 填写示例：
+                  </div>
+                  <Space wrap size={4}>
+                    {exampleValues.slice(0, 5).map((example, idx) => (
+                      <Tag
+                        key={`example-${idx}`}
+                        color="blue"
+                        style={{
+                          cursor: 'pointer',
+                          margin: 0,
+                        }}
+                        onClick={() => onApplyExample?.(example)}
+                      >
+                        {example}
+                      </Tag>
+                    ))}
+                  </Space>
                 </div>
               )}
             </Space>

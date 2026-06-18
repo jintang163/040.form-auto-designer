@@ -9,6 +9,11 @@ public class FieldRecommendationVO {
     private String inputType;
     private String recommendedValue;
     private Double confidence;
+    private String source;
+    private String explanation;
+    private String fillHint;
+    private String[] exampleValues;
+    private String[] relatedFields;
     private RecommendedItem[] items;
 
     @Data

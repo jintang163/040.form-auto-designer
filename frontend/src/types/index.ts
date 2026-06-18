@@ -341,6 +341,11 @@ export interface FieldRecommendation {
   inputType: string;
   recommendedValue: string;
   confidence: number;
+  source?: string;
+  explanation?: string;
+  fillHint?: string;
+  exampleValues?: string[];
+  relatedFields?: string[];
   items: RecommendedItem[];
 }
 
