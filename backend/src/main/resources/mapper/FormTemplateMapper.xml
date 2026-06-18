@@ -2,28 +2,36 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.formdesigner.mapper.FormTemplateMapper">
 
+    <sql id="Base_Column_List">
+        id, template_name, template_code, description, schema_json, version, status,
+        original_docx_url, original_html, original_tables_json,
+        tenant_id, created_at, updated_at
+    </sql>
+
     <insert id="insert" parameterType="com.formdesigner.entity.FormTemplate" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO form_template (template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at)
-        VALUES (#{templateName}, #{templateCode}, #{description}, #{schemaJson}, #{version}, #{status}, #{tenantId}, #{createdAt}, #{updatedAt})
+        INSERT INTO form_template (
+            template_name, template_code, description, schema_json, version, status,
+            original_docx_url, original_html, original_tables_json,
+            tenant_id, created_at, updated_at
+        ) VALUES (
+            #{templateName}, #{templateCode}, #{description}, #{schemaJson}, #{version}, #{status},
+            #{originalDocxUrl}, #{originalHtml}, #{originalTablesJson},
+            #{tenantId}, #{createdAt}, #{updatedAt}
+        )
     </insert>
 
     <select id="selectById" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
-        FROM form_template WHERE id = #{id} AND tenant_id = #{tenantId}
-    </select>
-
-    <select id="selectById" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        SELECT <include refid="Base_Column_List"/>
         FROM form_template WHERE id = #{id}
     </select>
 
     <select id="selectByTemplateCode" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        SELECT <include refid="Base_Column_List"/>
         FROM form_template WHERE template_code = #{templateCode} AND tenant_id = #{tenantId}
     </select>
 
     <select id="selectAll" resultType="com.formdesigner.entity.FormTemplate">
-        SELECT id, template_name, template_code, description, schema_json, version, status, tenant_id, created_at, updated_at
+        SELECT <include refid="Base_Column_List"/>
         FROM form_template WHERE tenant_id = #{tenantId} ORDER BY created_at DESC
     </select>
 
@@ -34,6 +42,9 @@
             <if test="templateCode != null">template_code = #{templateCode},</if>
             <if test="description != null">description = #{description},</if>
             <if test="schemaJson != null">schema_json = #{schemaJson},</if>
+            <if test="originalDocxUrl != null">original_docx_url = #{originalDocxUrl},</if>
+            <if test="originalHtml != null">original_html = #{originalHtml},</if>
+            <if test="originalTablesJson != null">original_tables_json = #{originalTablesJson},</if>
             <if test="version != null">version = #{version},</if>
             <if test="status != null">status = #{status},</if>
             <if test="tenantId != null">tenant_id = #{tenantId},</if>

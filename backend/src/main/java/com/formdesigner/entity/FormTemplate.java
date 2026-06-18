@@ -13,6 +13,9 @@ public class FormTemplate {
     private String schemaJson;
     private Integer version;
     private String status;
+    private String originalDocxUrl;
+    private String originalHtml;
+    private String originalTablesJson;
     private Long tenantId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

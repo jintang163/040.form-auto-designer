@@ -34,6 +34,25 @@ public class PrintController {
         pdfGenerationService.exportPdf(request, response);
     }
 
+    @GetMapping("/export-pdf")
+    public void exportPdfGet(
+            @RequestParam Long formDataId,
+            @RequestParam(required = false) Long printTemplateId,
+            @RequestParam(required = false) String printTemplateCode,
+            @RequestParam(required = false) Boolean saveToServer,
+            @RequestParam(required = false) String customFileName,
+            @RequestParam(required = false) String watermarkText,
+            HttpServletResponse response) {
+        PdfExportRequestDTO request = new PdfExportRequestDTO();
+        request.setFormDataId(formDataId);
+        request.setPrintTemplateId(printTemplateId);
+        request.setPrintTemplateCode(printTemplateCode);
+        request.setSaveToServer(saveToServer);
+        request.setCustomFileName(customFileName);
+        request.setWatermarkText(watermarkText);
+        pdfGenerationService.exportPdf(request, response);
+    }
+
     @PostMapping("/batch-export-pdf")
     public void batchExportPdf(@Valid @RequestBody BatchPdfExportRequestDTO request,
                                HttpServletResponse response) {

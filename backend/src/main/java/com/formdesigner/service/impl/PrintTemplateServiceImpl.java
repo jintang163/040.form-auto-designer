@@ -142,6 +142,14 @@ public class PrintTemplateServiceImpl implements PrintTemplateService {
     @Override
     public String generateDefaultTemplateContent(Long templateId) {
         FormTemplate formTemplate = formTemplateMapper.selectById(templateId);
+        if (formTemplate != null && formTemplate.getOriginalHtml() != null
+                && !formTemplate.getOriginalHtml().trim().isEmpty()) {
+            String html = buildTemplateFromOriginalHtml(formTemplate.getOriginalHtml());
+            if (html != null && !html.isEmpty()) {
+                log.info("使用Word原始布局生成打印模板: templateId={}", templateId);
+                return html;
+            }
+        }
         List<FormField> fields = formFieldMapper.selectByTemplateId(templateId);
 
         StringBuilder sb = new StringBuilder();
@@ -217,5 +225,40 @@ public class PrintTemplateServiceImpl implements PrintTemplateService {
         PrintTemplateVO vo = new PrintTemplateVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
+    }
+
+    /**
+     * 根据原始Word HTML生成Thymeleaf模板内容
+     * 将 {{fieldName}} 占位符替换为 Thymeleaf 表达式
+     */
+    private String buildTemplateFromOriginalHtml(String originalHtml) {
+        if (originalHtml == null || originalHtml.trim().isEmpty()) {
+            return null;
+        }
+        String html = originalHtml;
+        html = html.replaceAll("\\{\\{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}",
+                "<span th:text=\"${fields['$1']} ?: '-'\" class=\"field-value\">$1</span>");
+        html = html.replaceAll("\\$\\{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}",
+                "<span th:text=\"${fields['$1']} ?: '-'\" class=\"field-value\">$1</span>");
+        html = html.replaceAll("@\\{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}",
+                "<span th:text=\"${fields['$1']} ?: '-'\" class=\"field-value\">$1</span>");
+        if (!html.contains("formTitle") && !html.contains("表单标题")) {
+            StringBuilder wrapped = new StringBuilder();
+            wrapped.append("<div xmlns:th=\"http://www.thymeleaf.org\" class=\"document-wrapper\">\n");
+            wrapped.append("  <div class=\"form-header\">\n");
+            wrapped.append("    <h1 class=\"form-title\" th:text=\"${formTitle}\">表单标题</h1>\n");
+            wrapped.append("    <div class=\"form-meta\" style=\"text-align:right;color:#666;font-size:12px;margin:8px 0;\">\n");
+            wrapped.append("      提交编号: <span th:text=\"${formId}\">-</span> | ");
+            wrapped.append("      提交时间: <span th:text=\"${#dates.format(submittedAt, 'yyyy-MM-dd HH:mm:ss')}\">-</span> | ");
+            wrapped.append("      提交人: <span th:text=\"${submitterId}\">-</span>\n");
+            wrapped.append("    </div>\n");
+            wrapped.append("  </div>\n");
+            wrapped.append("  <div class=\"original-layout\" style=\"margin-top:16px;\">\n");
+            wrapped.append(html);
+            wrapped.append("  </div>\n");
+            wrapped.append("</div>\n");
+            return wrapped.toString();
+        }
+        return html;
     }
 }

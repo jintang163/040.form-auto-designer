@@ -8,9 +8,9 @@ import java.util.List;
 @Mapper
 public interface PrintRecordMapper {
 
-    PrintRecord selectById(@Param("id") Long id);
+    PrintRecord selectById(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
-    List<PrintRecord> selectByFormDataId(@Param("formDataId") Long formDataId);
+    List<PrintRecord> selectByFormDataId(@Param("formDataId") Long formDataId, @Param("tenantId") Long tenantId);
 
     List<PrintRecord> selectByTemplateId(@Param("templateId") Long templateId, @Param("tenantId") Long tenantId);
 

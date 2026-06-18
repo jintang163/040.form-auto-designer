@@ -28,13 +28,13 @@
     <select id="selectById" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM print_record
-        WHERE id = #{id}
+        WHERE id = #{id} AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
     </select>
 
     <select id="selectByFormDataId" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM print_record
-        WHERE form_data_id = #{formDataId}
+        WHERE form_data_id = #{formDataId} AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
         ORDER BY created_at DESC
     </select>
 

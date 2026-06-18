@@ -60,7 +60,16 @@ CREATE TABLE IF NOT EXISTS `print_record` (
     KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='打印记录表';
 
--- 插入默认打印模板
-INSERT INTO `print_template` (`template_id`, `template_name`, `template_code`, `template_type`, 
+-- 插入默认打印模板 (template_id=0 表示全局默认, 租户1=默认租户)
+INSERT INTO `print_template` (`template_id`, `template_name`, `template_code`, `template_type`,
     `paper_size`, `orientation`, `is_default`, `status`, `tenant_id`, `created_by`)
-VALUES (0, '默认A4打印模板', 'DEFAULT_A4', 'NORMAL', 'A4', 'PORTRAIT', 1, 'ACTIVE', 0, 'system');
+VALUES (0, '默认A4打印模板', 'DEFAULT_A4', 'NORMAL', 'A4', 'PORTRAIT', 1, 'ACTIVE', 1, 'system');
+
+-- ============================================================
+-- 为 form_template 表增加 Word 原始布局相关字段
+-- ============================================================
+ALTER TABLE form_template ADD COLUMN original_docx_url VARCHAR(500) DEFAULT NULL COMMENT '原始Word/DOCX文件URL(上传的源文件)';
+ALTER TABLE form_template ADD COLUMN original_html MEDIUMTEXT DEFAULT NULL COMMENT '从Word解析后保留原始表格布局的HTML(带{{fieldName}}占位符)';
+ALTER TABLE form_template ADD COLUMN original_tables_json TEXT DEFAULT NULL COMMENT '解析出的表格结构JSON(用于模板编辑)';
+
+CREATE INDEX idx_form_template_original_docx ON form_template (original_docx_url(255));

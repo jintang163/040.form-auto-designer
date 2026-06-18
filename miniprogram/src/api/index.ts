@@ -253,3 +253,164 @@ export function deployWorkflow(data: {
     data
   })
 }
+
+// ==================== 打印与PDF导出接口 ====================
+
+export interface PrintTemplate {
+  id: number
+  templateId: number
+  templateName: string
+  templateCode: string
+  templateType: 'NORMAL' | 'PREPRINT'
+  paperSize: string
+  orientation: 'PORTRAIT' | 'LANDSCAPE'
+  isDefault: boolean
+  watermarkEnabled: boolean
+  headerEnabled: boolean
+  footerEnabled: boolean
+  backgroundImageUrl?: string
+}
+
+export interface PdfExportRequest {
+  formDataId: number
+  printTemplateId?: number
+  printTemplateCode?: string
+  saveToServer?: boolean
+  customFileName?: string
+  excludeFields?: string[]
+  watermarkText?: string
+}
+
+export function listPrintTemplates(templateId: number | string) {
+  return request<PrintTemplate[]>({
+    url: `/api/print-templates/template/${templateId}`,
+    method: 'GET'
+  })
+}
+
+export function getDefaultPrintTemplate(templateId: number | string) {
+  return request<PrintTemplate>({
+    url: `/api/print-templates/default/${templateId}`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 下载PDF文件，返回本地临时文件路径
+ */
+export function exportPdfDownload(params: PdfExportRequest): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    uni.downloadFile({
+      url: BASE_URL + '/api/print/export-pdf',
+      method: 'POST',
+      header: {
+        'Content-Type': 'application/json',
+        Authorization: token ? `Bearer ${token}` : ''
+      },
+      filePath: `${uni.env.USER_DATA_PATH}/form_${params.formDataId}_${Date.now()}.pdf`,
+      formData: params as any,
+      success: (res) => {
+        if (res.statusCode === 200 && res.tempFilePath) {
+          resolve(res.tempFilePath)
+        } else {
+          reject(new Error(`下载失败(${res.statusCode})`))
+        }
+      },
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * 以POST JSON方式请求并下载PDF（后端使用@RequestBody）
+ */
+export function exportPdf(params: PdfExportRequest): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    const query = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : String(v))}`)
+      .join('&')
+    uni.downloadFile({
+      url: BASE_URL + `/api/print/export-pdf?${query}`,
+      method: 'GET',
+      header: {
+        Authorization: token ? `Bearer ${token}` : ''
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.tempFilePath) {
+          resolve(res.tempFilePath)
+        } else {
+          reject(new Error(`下载失败(${res.statusCode})`))
+        }
+      },
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * 打开PDF预览
+ */
+export function openPdfDocument(filePath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    uni.openDocument({
+      filePath,
+      fileType: 'pdf',
+      showMenu: true,
+      success: () => resolve(),
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * 分享PDF文件给好友（微信）
+ */
+export function sharePdfFile(filePath: string, title?: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // #ifdef MP-WEIXIN
+    uni.shareFileMessage({
+      filePath,
+      title: title || '表单数据PDF',
+      success: () => resolve(),
+      fail: (err) => reject(err)
+    })
+    // #endif
+    // #ifndef MP-WEIXIN
+    uni.openDocument({
+      filePath,
+      fileType: 'pdf',
+      showMenu: true,
+      success: () => resolve(),
+      fail: (err) => reject(err)
+    })
+    // #endif
+  })
+}
+
+/**
+ * 保存PDF到服务器并返回文件信息
+ */
+export function savePdfToServer(
+  formDataId: number | string,
+  printTemplateId?: number,
+  fileName?: string
+) {
+  return request<any>({
+    url: `/api/print/${formDataId}/save-pdf`,
+    method: 'POST',
+    data: { printTemplateId, fileName }
+  })
+}
+
+/**
+ * 获取某条表单数据的打印/导出历史
+ */
+export function listPrintRecords(formDataId: number | string) {
+  return request<any[]>({
+    url: `/api/print/records/form-data/${formDataId}`,
+    method: 'GET'
+  })
+}

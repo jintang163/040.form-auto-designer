@@ -146,8 +146,9 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             }
 
             String renderedHtml = templateEngine.process(templateContent, context);
+            String wrappedHtml = wrapWithPrintStyles(renderedHtml, printTemplate, formTemplate);
 
-            org.jsoup.nodes.Document jsoupDoc = Jsoup.parse(renderedHtml);
+            org.jsoup.nodes.Document jsoupDoc = Jsoup.parse(wrappedHtml);
             jsoupDoc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);
             org.w3c.dom.Document w3cDoc = new W3CDom().fromJsoup(jsoupDoc);
 
@@ -158,11 +159,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
             com.lowagie.text.Rectangle rect = getPageSize(pageSize, orientation);
             renderer.getSharedContext().setPrint(true);
-
-            BigDecimal marginTop = printTemplate.getMarginTop();
-            BigDecimal marginBottom = printTemplate.getMarginBottom();
-            BigDecimal marginLeft = printTemplate.getMarginLeft();
-            BigDecimal marginRight = printTemplate.getMarginRight();
+            renderer.getSharedContext().setBaseURL(null);
 
             renderer.setDocument(w3cDoc, null);
             renderer.layout();
@@ -493,5 +490,136 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         } catch (Exception e) {
             return new DeviceRgb(204, 204, 204);
         }
+    }
+
+    private String wrapWithPrintStyles(String bodyHtml, PrintTemplate printTemplate, FormTemplate formTemplate) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">");
+        html.append("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+        html.append("<head>");
+        html.append("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
+        html.append("<title>").append(formTemplate != null ? formTemplate.getTemplateName() : "表单打印").append("</title>");
+        html.append("<style type=\"text/css\">");
+        html.append(buildPageCss(printTemplate));
+        html.append(buildBodyCss(printTemplate));
+        html.append(buildHeaderFooterCss(printTemplate));
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body");
+        if (StrUtil.isNotBlank(printTemplate.getBackgroundImageUrl())) {
+            html.append(" class=\"with-background\"");
+        }
+        html.append(">");
+        html.append(buildHeaderHtml(printTemplate));
+        html.append(buildFooterHtml(printTemplate));
+        html.append("<div class=\"print-content\">");
+        html.append(bodyHtml);
+        html.append("</div>");
+        html.append("</body>");
+        html.append("</html>");
+        return html.toString();
+    }
+
+    private String buildPageCss(PrintTemplate printTemplate) {
+        StringBuilder css = new StringBuilder();
+        css.append("@page {");
+
+        String pageSize = StrUtil.isNotBlank(printTemplate.getPaperSize()) ? printTemplate.getPaperSize() : "A4";
+        String orientation = "LANDSCAPE".equalsIgnoreCase(printTemplate.getOrientation()) ? "landscape" : "portrait";
+        css.append("size: ").append(pageSize).append(" ").append(orientation).append(";");
+
+        BigDecimal mt = printTemplate.getMarginTop() != null ? printTemplate.getMarginTop() : new BigDecimal("2.54");
+        BigDecimal mb = printTemplate.getMarginBottom() != null ? printTemplate.getMarginBottom() : new BigDecimal("2.54");
+        BigDecimal ml = printTemplate.getMarginLeft() != null ? printTemplate.getMarginLeft() : new BigDecimal("2.54");
+        BigDecimal mr = printTemplate.getMarginRight() != null ? printTemplate.getMarginRight() : new BigDecimal("2.54");
+
+        css.append("margin-top: ").append(mt).append("cm;");
+        css.append("margin-bottom: ").append(mb).append("cm;");
+        css.append("margin-left: ").append(ml).append("cm;");
+        css.append("margin-right: ").append(mr).append("cm;");
+
+        if (Boolean.TRUE.equals(printTemplate.getHeaderEnabled()) && StrUtil.isNotBlank(printTemplate.getHeaderContent())) {
+            css.append("@top-center { content: element(header); }");
+        }
+        if (Boolean.TRUE.equals(printTemplate.getFooterEnabled())) {
+            if (StrUtil.isNotBlank(printTemplate.getFooterContent())) {
+                css.append("@bottom-center { content: element(footer); }");
+            } else {
+                css.append("@bottom-center { content: \"第 \" counter(page) \" 页 / 共 \" counter(pages) \" 页\"; font-size: 10px; color: #666; }");
+            }
+        }
+
+        css.append("}");
+        return css.toString();
+    }
+
+    private String buildBodyCss(PrintTemplate printTemplate) {
+        StringBuilder css = new StringBuilder();
+        css.append("body { font-family: STSong-Light, SimSun, '宋体', serif; font-size: 12px; color: #333; line-height: 1.6; }");
+        css.append(".print-content { width: 100%; }");
+        css.append("table { border-collapse: collapse; width: 100%; margin: 8px 0; }");
+        css.append("table th, table td { border: 1px solid #666; padding: 6px 8px; word-break: break-all; }");
+        css.append("table th { background: #f0f0f0; font-weight: bold; text-align: center; }");
+        css.append("p { margin: 4px 0; }");
+
+        if (StrUtil.isNotBlank(printTemplate.getBackgroundImageUrl())) {
+            css.append("body.with-background::before {");
+            css.append("  content: '';");
+            css.append("  position: fixed;");
+            css.append("  top: 0; left: 0; right: 0; bottom: 0;");
+            css.append("  background-image: url('").append(escapeCssUrl(printTemplate.getBackgroundImageUrl())).append("');");
+            css.append("  background-repeat: no-repeat;");
+            css.append("  background-position: center center;");
+            if (Boolean.TRUE.equals(printTemplate.getBackgroundFixed())) {
+                css.append("  background-size: 100% 100%;");
+            } else {
+                css.append("  background-size: contain;");
+            }
+            css.append("  opacity: 0.95;");
+            css.append("  z-index: -1;");
+            css.append("}");
+        }
+
+        if (Boolean.TRUE.equals(printTemplate.getHeaderEnabled()) || Boolean.TRUE.equals(printTemplate.getFooterEnabled())) {
+            css.append(".running-header { position: running(header); text-align: center; font-size: 12px; color: #333; padding-bottom: 4px; border-bottom: 1px solid #ccc; margin-bottom: 10px; }");
+            css.append(".running-footer { position: running(footer); text-align: center; font-size: 10px; color: #666; padding-top: 4px; border-top: 1px solid #ccc; margin-top: 10px; }");
+        }
+
+        return css.toString();
+    }
+
+    private String buildHeaderFooterCss(PrintTemplate printTemplate) {
+        return "h1, h2, h3 { font-weight: bold; margin: 12px 0 8px 0; }" +
+               "h1 { font-size: 20px; text-align: center; }" +
+               "h2 { font-size: 16px; }" +
+               "h3 { font-size: 14px; }" +
+               "hr { border: none; border-top: 1px solid #ccc; margin: 12px 0; }";
+    }
+
+    private String buildHeaderHtml(PrintTemplate printTemplate) {
+        if (!Boolean.TRUE.equals(printTemplate.getHeaderEnabled()) || StrUtil.isBlank(printTemplate.getHeaderContent())) {
+            return "";
+        }
+        return "<div class=\"running-header\">" + processHeaderFooterContent(printTemplate.getHeaderContent()) + "</div>";
+    }
+
+    private String buildFooterHtml(PrintTemplate printTemplate) {
+        if (!Boolean.TRUE.equals(printTemplate.getFooterEnabled()) || StrUtil.isBlank(printTemplate.getFooterContent())) {
+            return "";
+        }
+        return "<div class=\"running-footer\">" + processHeaderFooterContent(printTemplate.getFooterContent()) + "</div>";
+    }
+
+    private String processHeaderFooterContent(String content) {
+        content = content.replace("{page}", "<span style=\"content: counter(page); display: inline;\"></span>");
+        content = content.replace("{pages}", "<span style=\"content: counter(pages); display: inline;\"></span>");
+        content = content.replace("{date}", DateUtil.format(new Date(), "yyyy-MM-dd"));
+        content = content.replace("{datetime}", DateUtil.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+        return content;
+    }
+
+    private String escapeCssUrl(String url) {
+        if (url == null) return "";
+        return url.replace("'", "\\'").replace("\"", "\\\"");
     }
 }

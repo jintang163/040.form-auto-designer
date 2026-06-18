@@ -21,11 +21,17 @@
             <text class="item-no">{{ item.submitNo || '--' }}</text>
             <text class="item-time">{{ formatTime(item.submitTime) }}</text>
           </view>
-          <u-tag
-            :text="statusText(item.status)"
-            :type="statusType(item.status)"
-            size="mini"
-          />
+          <view class="item-right">
+            <u-tag
+              :text="statusText(item.status)"
+              :type="statusType(item.status)"
+              size="mini"
+              style="margin-right: 16rpx;"
+            />
+            <view class="action-btn" @click.stop="onActionClick(item)">
+              <text class="action-icon">⋯</text>
+            </view>
+          </view>
         </view>
       </view>
     </view>
@@ -36,10 +42,18 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import type { FormSubmitData } from '@/types'
-import { getFormDataList } from '@/api'
+import {
+  getFormDataList,
+  exportPdf,
+  openPdfDocument,
+  sharePdfFile,
+  savePdfToServer,
+  type PdfExportRequest
+} from '@/api'
 
 const loading = ref(false)
 const historyList = ref<FormSubmitData[]>([])
+const exporting = ref(false)
 
 interface HistoryGroup {
   templateName: string
@@ -76,7 +90,98 @@ async function loadHistory() {
 }
 
 function onItemClick(item: FormSubmitData) {
-  uni.showToast({ title: '查看详情功能开发中', icon: 'none' })
+  onActionClick(item)
+}
+
+function onActionClick(item: FormSubmitData) {
+  uni.showActionSheet({
+    itemList: ['预览PDF', '导出PDF到好友', '保存PDF到服务器'],
+    success: async (res) => {
+      const formDataId = Number((item as any).id || item.submitNo)
+      if (!formDataId || isNaN(formDataId)) {
+        uni.showToast({ title: '数据ID无效', icon: 'none' })
+        return
+      }
+      switch (res.tapIndex) {
+        case 0:
+          await handlePreviewPdf(item, formDataId)
+          break
+        case 1:
+          await handleSharePdf(item, formDataId)
+          break
+        case 2:
+          await handleSavePdf(item, formDataId)
+          break
+      }
+    }
+  })
+}
+
+async function handlePreviewPdf(item: FormSubmitData, formDataId: number) {
+  if (exporting.value) return
+  exporting.value = true
+  uni.showLoading({ title: '生成PDF中...', mask: true })
+  try {
+    const params: PdfExportRequest = {
+      formDataId,
+      customFileName: `${item.templateName || '表单'}_${formatFileDate(item.submitTime)}`
+    }
+    const filePath = await exportPdf(params)
+    uni.hideLoading()
+    await openPdfDocument(filePath)
+  } catch (e) {
+    uni.hideLoading()
+    console.error('预览PDF失败', e)
+    uni.showToast({ title: `预览失败: ${(e as Error).message || '请重试'}`, icon: 'none', duration: 3000 })
+  } finally {
+    exporting.value = false
+  }
+}
+
+async function handleSharePdf(item: FormSubmitData, formDataId: number) {
+  if (exporting.value) return
+  exporting.value = true
+  uni.showLoading({ title: '生成PDF中...', mask: true })
+  try {
+    const params: PdfExportRequest = {
+      formDataId,
+      customFileName: `${item.templateName || '表单'}_${formatFileDate(item.submitTime)}`
+    }
+    const filePath = await exportPdf(params)
+    uni.hideLoading()
+    const title = `${item.templateName || '表单数据'}_${formatFileDate(item.submitTime)}`
+    await sharePdfFile(filePath, title)
+  } catch (e) {
+    uni.hideLoading()
+    console.error('分享PDF失败', e)
+    uni.showToast({ title: `分享失败: ${(e as Error).message || '请重试'}`, icon: 'none', duration: 3000 })
+  } finally {
+    exporting.value = false
+  }
+}
+
+async function handleSavePdf(item: FormSubmitData, formDataId: number) {
+  uni.showLoading({ title: '保存中...', mask: true })
+  try {
+    const fileName = `${item.templateName || '表单'}_${formatFileDate(item.submitTime)}.pdf`
+    const res = await savePdfToServer(formDataId, undefined, fileName)
+    uni.hideLoading()
+    if (res.code === 200 || res.code === 0) {
+      uni.showToast({ title: '保存成功', icon: 'success' })
+    } else {
+      uni.showToast({ title: res.message || '保存失败', icon: 'none' })
+    }
+  } catch (e) {
+    uni.hideLoading()
+    console.error('保存PDF失败', e)
+    uni.showToast({ title: '保存失败', icon: 'none' })
+  }
+}
+
+function formatFileDate(time?: string): string {
+  if (!time) return String(Date.now())
+  const d = new Date(time)
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
 }
 
 function statusText(status?: string): string {
@@ -143,6 +248,27 @@ function formatTime(time?: string): string {
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+}
+
+.action-btn {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f5f5f5;
+}
+
+.action-icon {
+  font-size: 36rpx;
+  color: #999;
+  line-height: 1;
 }
 
 .item-info {

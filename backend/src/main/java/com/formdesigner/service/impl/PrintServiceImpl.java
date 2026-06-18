@@ -19,7 +19,8 @@ public class PrintServiceImpl implements PrintService {
 
     @Override
     public List<PrintRecord> getPrintRecordsByFormDataId(Long formDataId) {
-        return printRecordMapper.selectByFormDataId(formDataId);
+        Long tenantId = TenantContext.getCurrentTenantId();
+        return printRecordMapper.selectByFormDataId(formDataId, tenantId);
     }
 
     @Override
@@ -30,7 +31,8 @@ public class PrintServiceImpl implements PrintService {
 
     @Override
     public PrintRecord getPrintRecordById(Long id) {
-        return printRecordMapper.selectById(id);
+        Long tenantId = TenantContext.getCurrentTenantId();
+        return printRecordMapper.selectById(id, tenantId);
     }
 
     @Override
