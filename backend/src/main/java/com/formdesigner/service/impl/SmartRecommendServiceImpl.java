@@ -18,7 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -55,10 +57,23 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
 
         List<FieldRecommendationVO> typeRecs = aiRecommendService.getFieldTypeRecommendations(
                 templateId, latestFilledValues, fieldDefinitions, null, null);
+        boolean aiAvailable = typeRecs != null && !typeRecs.isEmpty();
         for (FieldRecommendationVO rec : typeRecs) {
             enrichRecommendation(rec, fields);
-            if (rec.getConfidence() > 0) {
+            if (rec.getConfidence() > 0
+                    || (rec.getFillHint() != null && !rec.getFillHint().isEmpty())
+                    || (rec.getExampleValues() != null && rec.getExampleValues().length > 0)) {
                 recommendationMap.put(rec.getFieldName(), rec);
+            }
+        }
+
+        if (!aiAvailable) {
+            for (FormField field : fields) {
+                if (!isRecommendableField(field)) continue;
+                FieldRecommendationVO fallback = generateFallbackRecommendation(field);
+                if (fallback != null) {
+                    recommendationMap.put(fallback.getFieldName(), fallback);
+                }
             }
         }
 
@@ -398,5 +413,161 @@ public class SmartRecommendServiceImpl implements SmartRecommendService {
         item.setScore(score);
         item.setSource(source);
         return item;
+    }
+
+    private FieldRecommendationVO generateFallbackRecommendation(FormField field) {
+        String inputType = field.getInputType();
+        String fieldLabel = field.getFieldLabel() != null ? field.getFieldLabel() : "";
+        String fieldName = field.getFieldName();
+        FieldRecommendationVO rec = new FieldRecommendationVO();
+        rec.setFieldName(fieldName);
+        rec.setFieldLabel(fieldLabel);
+        rec.setInputType(inputType);
+        rec.setSource("TYPE_BASED");
+
+        LocalDate today = LocalDate.now();
+        String lowerLabel = fieldLabel.toLowerCase();
+        String lowerName = fieldName.toLowerCase();
+
+        switch (inputType) {
+            case "date":
+                rec.setRecommendedValue(today.format(DateTimeFormatter.ISO_LOCAL_DATE));
+                rec.setConfidence(0.9);
+                rec.setExplanation("日期默认为今天");
+                rec.setFillHint("请选择日期，格式：YYYY-MM-DD");
+                rec.setExampleValues(new String[]{
+                        today.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                        today.minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE),
+                        today.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
+                });
+                break;
+            case "number":
+                if (lowerLabel.contains("年龄") || lowerName.contains("age")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("请输入周岁年龄");
+                    rec.setFillHint("请输入年龄，如：25");
+                    rec.setExampleValues(new String[]{"25", "30", "45"});
+                } else if (lowerLabel.contains("数量") || lowerName.contains("quantity") || lowerName.contains("count")) {
+                    rec.setRecommendedValue("1");
+                    rec.setConfidence(0.7);
+                    rec.setExplanation("数量默认为1");
+                    rec.setFillHint("请输入数量");
+                    rec.setExampleValues(new String[]{"1", "5", "10"});
+                } else {
+                    rec.setRecommendedValue("0");
+                    rec.setConfidence(0.5);
+                    rec.setExplanation("数字字段默认值为0");
+                    rec.setFillHint("请输入数字");
+                    rec.setExampleValues(new String[]{"0", "100", "999"});
+                }
+                break;
+            case "select":
+            case "radio":
+                if (lowerLabel.contains("性别") || lowerName.contains("gender") || lowerName.contains("sex")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("请选择性别");
+                    rec.setFillHint("请选择性别");
+                    rec.setExampleValues(new String[]{"男", "女"});
+                } else if (lowerLabel.contains("优先级") || lowerName.contains("priority")) {
+                    rec.setRecommendedValue("中");
+                    rec.setConfidence(0.75);
+                    rec.setExplanation("优先级默认为中");
+                    rec.setFillHint("请选择优先级");
+                    rec.setExampleValues(new String[]{"低", "中", "高"});
+                } else if (lowerLabel.contains("状态") || lowerName.contains("status")) {
+                    rec.setRecommendedValue("待审批");
+                    rec.setConfidence(0.8);
+                    rec.setExplanation("状态默认为待审批");
+                    rec.setFillHint("请选择状态");
+                    rec.setExampleValues(new String[]{"待审批", "审批中", "已通过"});
+                } else {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setFillHint("请选择" + fieldLabel);
+                    return rec;
+                }
+                break;
+            case "text":
+                if (lowerLabel.contains("年份") || lowerName.contains("year")) {
+                    rec.setRecommendedValue(String.valueOf(today.getYear()));
+                    rec.setConfidence(0.95);
+                    rec.setExplanation("年份默认为今年");
+                    rec.setFillHint("请输入4位年份");
+                    rec.setExampleValues(new String[]{String.valueOf(today.getYear()), String.valueOf(today.getYear() - 1)});
+                } else if (lowerLabel.contains("月份") || lowerName.contains("month")) {
+                    rec.setRecommendedValue(String.format("%02d", today.getMonthValue()));
+                    rec.setConfidence(0.9);
+                    rec.setExplanation("月份默认为本月");
+                    rec.setFillHint("请输入月份，1-12");
+                    rec.setExampleValues(new String[]{String.format("%02d", today.getMonthValue()), "01", "12"});
+                } else if (lowerLabel.contains("手机") || lowerName.contains("phone") || lowerName.contains("mobile")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("请输入11位手机号码");
+                    rec.setFillHint("请输入11位手机号码");
+                    rec.setExampleValues(new String[]{"13800138000", "13912345678"});
+                } else if (lowerLabel.contains("邮箱") || lowerName.contains("email")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("请输入有效邮箱地址");
+                    rec.setFillHint("请输入有效邮箱地址");
+                    rec.setExampleValues(new String[]{"user@example.com", "zhangsan@company.com"});
+                } else if (lowerLabel.contains("身份证") || lowerName.contains("idcard") || lowerName.contains("id_card")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("请输入18位身份证号码");
+                    rec.setFillHint("请输入18位身份证号码");
+                    rec.setExampleValues(new String[]{"110101199001011234"});
+                } else if (lowerLabel.contains("国家") || lowerName.contains("country")) {
+                    rec.setRecommendedValue("中国");
+                    rec.setConfidence(0.8);
+                    rec.setExplanation("国家默认为中国");
+                    rec.setFillHint("请选择或输入国家名称");
+                    rec.setExampleValues(new String[]{"中国", "美国", "日本"});
+                } else if (lowerLabel.contains("民族") || lowerName.contains("nationality")) {
+                    rec.setRecommendedValue("汉族");
+                    rec.setConfidence(0.75);
+                    rec.setExplanation("民族默认为汉族");
+                    rec.setFillHint("请选择或输入民族");
+                    rec.setExampleValues(new String[]{"汉族", "满族", "回族"});
+                } else {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setFillHint("请输入" + fieldLabel);
+                    return rec;
+                }
+                break;
+            case "textarea":
+                if (lowerLabel.contains("备注") || lowerName.contains("remark") || lowerName.contains("note")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("如有需要说明的事项请在此填写");
+                    rec.setFillHint("请填写需要说明的内容");
+                    rec.setExampleValues(new String[]{"无特殊说明"});
+                } else if (lowerLabel.contains("原因") || lowerName.contains("reason")) {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setExplanation("请简要说明原因");
+                    rec.setFillHint("请简要说明原因");
+                    rec.setExampleValues(new String[]{"个人发展需要", "业务拓展需求"});
+                } else {
+                    rec.setRecommendedValue(null);
+                    rec.setConfidence(0.0);
+                    rec.setFillHint("请输入" + fieldLabel);
+                    return rec;
+                }
+                break;
+            case "multiSelect":
+                rec.setRecommendedValue(null);
+                rec.setConfidence(0.0);
+                rec.setFillHint("请选择" + fieldLabel);
+                return rec;
+            default:
+                return null;
+        }
+
+        return rec;
     }
 }

@@ -5,13 +5,12 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import { Spin, Alert } from 'antd';
+import { Spin } from 'antd';
 import FieldSuggestion from './FieldSuggestion';
-import { validationApi, aiRecommendApi } from '@/services/api';
+import { validationApi } from '@/services/api';
 import type {
   FieldValidationResult,
   ValidationSuggestion,
-  ContextRecommendation,
 } from '@/types';
 
 interface SmartFieldWrapperProps {
@@ -27,6 +26,9 @@ interface SmartFieldWrapperProps {
   debounceMs?: number;
   enableSuggestions?: boolean;
   enableAutoCorrect?: boolean;
+  fillHint?: string;
+  exampleValues?: string[];
+  explanation?: string;
 }
 
 export const SmartFieldWrapper: React.FC<SmartFieldWrapperProps> = ({
@@ -42,6 +44,9 @@ export const SmartFieldWrapper: React.FC<SmartFieldWrapperProps> = ({
   debounceMs = 500,
   enableSuggestions = true,
   enableAutoCorrect = true,
+  fillHint,
+  exampleValues = [],
+  explanation,
 }) => {
   const [validationResult, setValidationResult] = useState<FieldValidationResult | null>(null);
   const [validating, setValidating] = useState(false);
@@ -115,10 +120,21 @@ export const SmartFieldWrapper: React.FC<SmartFieldWrapperProps> = ({
     [onValueChange]
   );
 
+  const handleApplyExample = useCallback(
+    (exampleValue: string) => {
+      onValueChange?.(exampleValue);
+    },
+    [onValueChange]
+  );
+
   const showSuggestions = useMemo(() => {
     if (!touched || !validationResult) return false;
     return !validationResult.valid || (validationResult.suggestions?.length ?? 0) > 0;
   }, [touched, validationResult]);
+
+  const showHintArea = useMemo(() => {
+    return !!(fillHint || exampleValues.length > 0 || explanation);
+  }, [fillHint, exampleValues, explanation]);
 
   return (
     <div
@@ -159,9 +175,25 @@ export const SmartFieldWrapper: React.FC<SmartFieldWrapperProps> = ({
         errors={validationResult?.errors || []}
         suggestions={validationResult?.suggestions || []}
         autoCorrectedValue={validationResult?.autoCorrectedValue}
+        fillHint={showSuggestions ? undefined : fillHint}
+        exampleValues={showSuggestions ? [] : exampleValues}
+        explanation={showSuggestions ? undefined : explanation}
         onApplySuggestion={handleApplySuggestion}
         onApplyAutoCorrect={handleApplyAutoCorrect}
+        onApplyExample={handleApplyExample}
       />
+
+      {showHintArea && !showSuggestions && !validationResult && (
+        <FieldSuggestion
+          visible={true}
+          errors={[]}
+          suggestions={[]}
+          fillHint={fillHint}
+          exampleValues={exampleValues}
+          explanation={explanation}
+          onApplyExample={handleApplyExample}
+        />
+      )}
     </div>
   );
 };

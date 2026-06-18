@@ -18,10 +18,10 @@ import {
   Upload,
   TextArea,
 } from '@formily/antd';
-import type { FormSchema, FormField, CollaborationCursor as CollaborationCursorType, FieldLock } from '@/types';
+import type { FormSchema, FormField, CollaborationCursor as CollaborationCursorType, FieldLock, FieldRecommendation } from '@/types';
 import { Card, Button, message } from 'antd';
 import type { Form } from '@formily/core';
-import { linkageApi, validationApi } from '@/services/api';
+import { linkageApi, validationApi, recommendApi } from '@/services/api';
 import { getOrCreateSubmitterId } from '@/utils/submitterId';
 import SmartFieldWrapper from './SmartFieldWrapper';
 import AddressComplete from './AddressComplete';
@@ -133,6 +133,23 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       });
       return map;
     }, [fields]);
+
+    const [recommendMap, setRecommendMap] = useState<Record<string, FieldRecommendation>>({});
+
+    useEffect(() => {
+      if (!templateId) return;
+      const submitterId = getOrCreateSubmitterId();
+      recommendApi
+        .getFormRecommendations(templateId, submitterId)
+        .then((data) => {
+          const map: Record<string, FieldRecommendation> = {};
+          (data.fields || []).forEach((f) => {
+            map[f.fieldName] = f;
+          });
+          setRecommendMap(map);
+        })
+        .catch(() => {});
+    }, [templateId]);
 
     const isFieldLockedByOther = useCallback(
       (fieldName: string): boolean => {
@@ -552,12 +569,9 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
               props.onChange?.(val);
               handleFieldValueChange(fieldName, val);
             }}
-            fieldProps={{
-              'data-field-name': fieldName,
-            }}
-            decoratorProps={{
-              'data-field-name': fieldName,
-            }}
+            fillHint={recommendMap[fieldName]?.fillHint}
+            exampleValues={recommendMap[fieldName]?.exampleValues}
+            explanation={recommendMap[fieldName]?.explanation}
           >
             <Input
               {...props}
@@ -610,12 +624,9 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
               props.onChange?.(val);
               handleFieldValueChange(fieldName, val);
             }}
-            fieldProps={{
-              'data-field-name': fieldName,
-            }}
-            decoratorProps={{
-              'data-field-name': fieldName,
-            }}
+            fillHint={recommendMap[fieldName]?.fillHint}
+            exampleValues={recommendMap[fieldName]?.exampleValues}
+            explanation={recommendMap[fieldName]?.explanation}
           >
             <AddressComplete
               value={fieldValue}
@@ -648,6 +659,7 @@ const SmartSchemaPreview = forwardRef<SmartSchemaPreviewRef, SmartSchemaPreviewP
       onFieldFocus,
       onFieldBlur,
       handleFieldValueChange,
+      recommendMap,
     ]);
 
     return (
